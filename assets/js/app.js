@@ -96,9 +96,9 @@
   let ALL = (window.JOBS || []).slice(); // static + live listings appended later
 
   const state = {
-    q: "", sort: "new", minSalary: 0,
+    q: "", sort: "new", minSalary: 0, minFit: 0,
     toggles: { new: false, starred: false, flagged: false, hidden: false },
-    facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set(), status: new Set() }
+    facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set(), status: new Set(), skills: new Set() }
   };
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -198,8 +198,10 @@
     if (f.workMode.size && !f.workMode.has(j.workMode)) return false;
     if (f.kind.size && !f.kind.has(j.kind)) return false;
     if (f.status.size && !f.status.has(status[j.id] || "")) return false;
+    if (f.skills.size && !(j.tags || []).some((t) => f.skills.has(t))) return false;
     const top = j.salaryMax || j.salaryMin || 0;
     if (state.minSalary > 0 && top > 0 && top < state.minSalary) return false;
+    if (state.minFit > 0 && fitPct(j) < state.minFit) return false;
     return true;
   }
   function sortJobs(list) {
@@ -580,12 +582,38 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     liveLoading = false;
   }
 
+  // Skills filter: top tags across cards, excluding generic/location/company labels.
+  const SKILL_STOP = new Set(["live feed", "live search", "remote", "onsite/hybrid", "onsite", "hybrid", "current employer", "non-k12", "new haven", "branford", "hamden", "west haven", "hartford", "bloomfield", "new britain", "stamford", "norwalk", "wilton", "ridgefield", "groton", "boston", "20 min from guilford", "~25 min", "award-winning wfh", "remote-first", "remote-friendly"]);
+  function buildSkillsFilter() {
+    const wrap = document.querySelector("#filter-skills .filter-chips"); if (!wrap) return;
+    const companies = new Set(ALL.map((j) => j.company.toLowerCase()));
+    const freq = {};
+    ALL.forEach((j) => (j.tags || []).forEach((t) => {
+      const k = t.toLowerCase();
+      if (SKILL_STOP.has(k) || companies.has(k)) return;
+      if (/\d/.test(t) && /(opening|min|\bmi\b|day|hr)/i.test(t)) return;
+      freq[t] = (freq[t] || 0) + 1;
+    }));
+    const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+    wrap.innerHTML = "";
+    top.forEach(([tag, n]) => {
+      const chip = document.createElement("button");
+      chip.className = "chip" + (state.facets.skills.has(tag) ? " active" : "");
+      chip.innerHTML = esc(tag) + ` <span class="chip-count">${n}</span>`;
+      chip.addEventListener("click", () => {
+        const set = state.facets.skills; set.has(tag) ? set.delete(tag) : set.add(tag);
+        chip.classList.toggle("active"); render();
+      });
+      wrap.appendChild(chip);
+    });
+  }
   function refreshFacets() {
     buildFacet("filter-roleFamily", "roleFamily");
     buildFacet("filter-regions", "regions");
     buildFacet("filter-workMode", "workMode");
     buildFacet("filter-kind", "kind");
     buildStatusFilter();
+    buildSkillsFilter();
   }
 
   // ============================ map =========================================
@@ -861,14 +889,25 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     });
     if (localStorage.getItem(LS.density) === "compact") { document.body.classList.add("compact"); document.getElementById("densityBtn").textContent = "▤ Comfortable"; }
 
+    // minimum-fit chips (single-select)
+    document.querySelectorAll("#filter-minfit .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        state.minFit = +chip.dataset.fit;
+        document.querySelectorAll("#filter-minfit .chip").forEach((c) => c.classList.toggle("active", c === chip));
+        render();
+      });
+    });
+
     document.getElementById("refreshLiveBtn").addEventListener("click", () => loadLive());
     document.getElementById("markSeenBtn").addEventListener("click", () => { ALL.forEach((j) => seen.add(j.id)); saveSet(LS.seen, seen); scheduleSync(); render(); });
     document.getElementById("clearFiltersBtn").addEventListener("click", () => {
       state.q = ""; document.getElementById("searchBox").value = "";
       state.minSalary = 0; salaryRange.value = 0; salaryReadout.textContent = "Any";
+      state.minFit = 0;
       Object.keys(state.toggles).forEach((k) => (state.toggles[k] = false));
       Object.values(state.facets).forEach((s) => s.clear());
       document.querySelectorAll(".chip.active, .toggle.active").forEach((c) => c.classList.remove("active"));
+      document.querySelector('#filter-minfit .chip[data-fit="0"]').classList.add("active");
       render();
     });
 

@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.5.0 — 2026-05-30
+- **Centered header & nav** — masthead (avatar + title + sync) and tab bar are now
+  centered on the page instead of left-aligned.
+- **Expanded filters:** new **Skills / keywords** filter row (top ~20 skill tags with
+  counts, excluding generic/location/company labels) and a **Minimum fit** filter
+  (Any / 50+ / 70+ / 85+) using the résumé fit score.
+
 ## v1.4.2 — 2026-05-30
 - **3 new specific posting cards (monthly refresh):**
   - eClinical Solutions Technical Writer (Technical Writing / LIMS, remote, $90k–$100k) — clinical data cloud documentation role mirroring Thermo Fisher content work.

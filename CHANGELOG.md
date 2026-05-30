@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.3 — 2026-05-30
+- Added 7 new specific job-posting cards (monthly refresh): Leidos Agile Product Owner (PO/Scrum, remote), Beckman Coulter/Danaher Learning Experience Designer-Developer (ID/L&D, remote, $110k–$120k + bonus), Veeva Systems LIMS Implementation Consultant (LIMS/Informatics, remote), Veeva Systems Technical Writer–Vault (Technical Writing, remote), Sorcero Customer Success Manager (Customer Education, remote, $110k–$125k), Salesforce Customer Success Manager Life Sciences (Customer Education, remote, $123k–$227k), Experian Health Product Owner–Health SaaS (PO, remote).
+- All new cards are `kind:"posting"`, `status:"snapshot"`, `dateAdded:"2026-05-30"`; covers Product Owner, Instructional Design, Technical Writing, LIMS/Informatics, Customer Education/Enablement, and Solutions/Implementation families.
+
 Versioning starts here. Each update ships on its own `vX.Y.Z` branch and is then
 merged to `main` (which is what GitHub Pages serves).
 

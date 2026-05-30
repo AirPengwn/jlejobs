@@ -3,6 +3,11 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.6.1 — 2026-05-30
+- Added a **⟳ Update** button next to the sync chip — clears cached assets + the service
+  worker and reloads fresh, so you can pull the latest version on an installed phone PWA
+  without a hard refresh. (SW cache → jle-cache-v1.6.1.)
+
 ## v1.6.0 — 2026-05-30 — Opportunities redesign (design handoff)
 - **Card:** three-tier volume system. Collapsed face = kicker (optional New/Live + muted
   type), title, sub (company · location · salary), right-aligned tier-colored **Fit** anchor,

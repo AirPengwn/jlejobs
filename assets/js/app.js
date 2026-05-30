@@ -1045,6 +1045,17 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     // PWA service worker (https/localhost only)
     if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {})); }
 
+    // force-update: clear cached assets + service worker, then reload fresh (for installed PWA)
+    const upBtn = document.getElementById("updateBtn");
+    if (upBtn) upBtn.addEventListener("click", async () => {
+      upBtn.disabled = true; upBtn.textContent = "⟳ Updating…";
+      try {
+        if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); }
+        if ("serviceWorker" in navigator) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((r) => r.unregister())); }
+      } catch (e) { /* ignore */ }
+      location.reload();
+    });
+
     // refocus pull
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden && sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }

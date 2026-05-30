@@ -3,6 +3,11 @@
 Versioning starts here. Each update ships on its own `vX.Y.Z` branch and is then
 merged to `main` (which is what GitHub Pages serves).
 
+## v1.2.1 — 2026-05-30
+- Added a **"🔄 Refresh live"** button (results bar) that re-pulls all live
+  company boards on demand — fully client-side, no GitHub/server needed. Replaces
+  prior live cards rather than stacking them.
+
 ## v1.2.0 — 2026-05-30
 - **Expanded live listings to all verified feeds.** Added Lever + Ashby support
   alongside Greenhouse, and grew the board list to 12 verified, CORS-open boards

@@ -529,13 +529,21 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       return out;
     } catch (e) { return []; }
   }
+  let liveLoading = false;
   async function loadLive() {
+    if (liveLoading) return;
+    liveLoading = true;
     const ind = document.getElementById("liveIndicator");
-    if (ind) ind.textContent = "⟳ loading live listings…";
+    const btn = document.getElementById("refreshLiveBtn");
+    if (ind) ind.textContent = "⟳ refreshing live listings…";
+    if (btn) { btn.disabled = true; btn.textContent = "⟳ Refreshing…"; }
     const results = await Promise.allSettled(LIVE_BOARDS.map(fetchBoard));
     const live = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-    if (live.length) { ALL = ALL.concat(live); refreshFacets(); render(); }
+    ALL = ALL.filter((j) => !j.live).concat(live); // replace prior live cards, don't stack
+    refreshFacets(); render();
     if (ind) ind.textContent = live.length ? `● ${live.length} live listings included` : "";
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 Refresh live"; }
+    liveLoading = false;
   }
 
   function refreshFacets() {
@@ -611,6 +619,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     });
     if (localStorage.getItem(LS.density) === "compact") { document.body.classList.add("compact"); document.getElementById("densityBtn").textContent = "▤ Comfortable"; }
 
+    document.getElementById("refreshLiveBtn").addEventListener("click", () => loadLive());
     document.getElementById("markSeenBtn").addEventListener("click", () => { ALL.forEach((j) => seen.add(j.id)); saveSet(LS.seen, seen); scheduleSync(); render(); });
     document.getElementById("clearFiltersBtn").addEventListener("click", () => {
       state.q = ""; document.getElementById("searchBox").value = "";

@@ -434,31 +434,40 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
 
   // ============================ live listings ===============================
   // CORS-enabled JSON boards. Roles filtered to John's families + remote/CT.
+  // Verified CORS-open boards with remote-US/CT roles in John's families.
   const LIVE_BOARDS = [
-    { src: "greenhouse", token: "datadog", label: "Datadog" },
-    { src: "greenhouse", token: "gitlab", label: "GitLab" },
-    { src: "greenhouse", token: "asana", label: "Asana" },
-    { src: "greenhouse", token: "samsara", label: "Samsara" },
-    { src: "greenhouse", token: "klaviyo", label: "Klaviyo" }
+    { src: "greenhouse", token: "samsara",   label: "Samsara" },
+    { src: "greenhouse", token: "gitlab",    label: "GitLab" },
+    { src: "greenhouse", token: "instacart", label: "Instacart" },
+    { src: "greenhouse", token: "affirm",    label: "Affirm" },
+    { src: "greenhouse", token: "twilio",    label: "Twilio" },
+    { src: "greenhouse", token: "dropbox",   label: "Dropbox" },
+    { src: "greenhouse", token: "webflow",   label: "Webflow" },
+    { src: "greenhouse", token: "benchprep", label: "BenchPrep" },
+    { src: "greenhouse", token: "lattice",   label: "Lattice" },
+    { src: "ashby",      token: "vanta",     label: "Vanta" },
+    { src: "ashby",      token: "ashby",     label: "Ashby" },
+    { src: "ashby",      token: "openai",    label: "OpenAI" }
   ];
   const ROLE_RX = [
     [/product\s+(owner|manager)/i, "Product Owner / PM"],
-    [/instructional|curriculum|learning experience|learning designer/i, "Instructional Design / L&D"],
+    [/program manager|technical program/i, "Product Owner / PM"],
+    [/instructional|curriculum|learning experience|learning design/i, "Instructional Design / L&D"],
     [/enablement|customer education|technical trainer|\btrainer\b/i, "Customer Education / Enablement"],
-    [/learning|training|\bl&d\b/i, "Instructional Design / L&D"],
-    [/technical writer|documentation|content strateg/i, "Technical Writing / Content"],
+    [/learning (experience|design|develop|specialist|architect)|learning &|\bl&d\b|\btraining\b/i, "Instructional Design / L&D"],
+    [/technical writer|documentation|content strateg|knowledge manage/i, "Technical Writing / Content"],
     [/scrum master|agile coach|release train/i, "Scrum Master / Agile"],
     [/business analyst|systems analyst/i, "Business Analyst"],
     [/customer success/i, "Customer Education / Enablement"],
-    [/implementation|solutions consultant|onboarding/i, "Solutions / Implementation"],
-    [/program manager|technical program/i, "Product Owner / PM"]
+    [/implementation|solutions consultant|onboarding/i, "Solutions / Implementation"]
   ];
-  const TITLE_RX = /product\s+(owner|manager)|instructional|curriculum|enablement|learning|training|technical writer|documentation|content strateg|scrum master|agile coach|release train|business analyst|systems analyst|customer success|implementation|solutions consultant|onboarding|program manager/i;
-  const EXCLUDE_RX = /intern|sales (rep|develop|account)|sdr|\bbdr\b|engineer$|software engineer|director|vp,|vice president|recruit/i;
+  const TITLE_RX = /product\s+(owner|manager)|technical program manager|program manager|instructional|curriculum|enablement|learning experience|learning design|learning &|\bl&d\b|learning and development|learning specialist|learning architect|corporate trainer|\btrainer\b|technical writer|documentation|content strateg|knowledge manage|scrum master|agile coach|release train|business analyst|systems analyst|customer success|customer education|implementation (manager|consultant|specialist|lead)|solutions consultant|onboarding (manager|specialist)/i;
+  const EXCLUDE_RX = /intern|sales (rep|develop|account)|\bsdr\b|\bbdr\b|machine learning|deep learning|data engineer|data scientist|software engineer|account executive|\bvp\b|recruit|warehouse|driver/i;
   function locOK(loc) {
     const l = (loc || "").toLowerCase();
     if (/connecticut|new haven|hartford|stamford|norwalk|\bct\b/.test(l)) return true;
-    if (/remote/.test(l) && /(us|u\.s|usa|united states|america|north america|anywhere|nationwide)/.test(l)) return true;
+    // word-boundary US match so "Austria"/"Australia" don't sneak in via "us"
+    if (/remote/.test(l) && /(\bus\b|\busa\b|u\.s|united states|america|anywhere|nationwide)/.test(l)) return true;
     if (/^remote$/.test(l.trim())) return true;
     return false;
   }
@@ -466,28 +475,56 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     const out = []; ROLE_RX.forEach(([rx, fam]) => { if (rx.test(title) && !out.includes(fam)) out.push(fam); });
     return out.length ? out : ["Product Owner / PM"];
   }
-  async function fetchBoard(b) {
-    try {
+  // normalize each source into {title, loc, url, posted, id, remote}
+  async function fetchRaw(b) {
+    if (b.src === "greenhouse") {
       const res = await fetch("https://boards-api.greenhouse.io/v1/boards/" + b.token + "/jobs");
       if (!res.ok) return [];
-      const jobs = ((await res.json()) || {}).jobs || [];
-      const out = [];
-      for (const j of jobs) {
-        const title = j.title || "", loc = (j.location || {}).name || "";
-        if (!TITLE_RX.test(title) || EXCLUDE_RX.test(title) || !locOK(loc)) continue;
-        const remote = /remote/i.test(loc);
+      return (((await res.json()) || {}).jobs || []).map((j) => ({
+        title: j.title || "", loc: (j.location || {}).name || "", url: j.absolute_url,
+        posted: (j.updated_at || "").slice(0, 10), id: j.id
+      }));
+    }
+    if (b.src === "ashby") {
+      const res = await fetch("https://api.ashbyhq.com/posting-api/job-board/" + b.token);
+      if (!res.ok) return [];
+      return (((await res.json()) || {}).jobs || []).filter((j) => j.isListed !== false).map((j) => ({
+        title: j.title || "", loc: j.location || (j.isRemote ? "Remote" : ""), url: j.jobUrl || j.applyUrl,
+        posted: (j.publishedAt || "").slice(0, 10), id: j.id, remote: !!j.isRemote
+      }));
+    }
+    if (b.src === "lever") {
+      const res = await fetch("https://api.lever.co/v0/postings/" + b.token + "?mode=json");
+      if (!res.ok) return [];
+      return ((await res.json()) || []).map((p) => ({
+        title: p.text || "", loc: (p.categories || {}).location || "", url: p.hostedUrl,
+        posted: "", id: p.id
+      }));
+    }
+    return [];
+  }
+  async function fetchBoard(b) {
+    try {
+      const raw = await fetchRaw(b);
+      const out = [], seenTitles = new Set();
+      for (const j of raw) {
+        if (!j.title || !j.url || !TITLE_RX.test(j.title) || EXCLUDE_RX.test(j.title) || !locOK(j.loc)) continue;
+        const tkey = j.title.toLowerCase().trim();
+        if (seenTitles.has(tkey)) continue;
+        seenTitles.add(tkey);
+        const remote = j.remote || /remote/i.test(j.loc);
+        const inCT = /connecticut|new haven|hartford|stamford|norwalk|\bct\b/i.test(j.loc);
         out.push({
           id: "live-" + b.token + "-" + j.id, kind: "posting", status: "live", live: true,
-          title, company: b.label, location: loc, workMode: remote ? "Remote" : "Hybrid",
-          regions: /connecticut|new haven|hartford|stamford|norwalk|\bct\b/i.test(loc) ? ["Connecticut"] : ["Remote"],
-          roleFamily: rolesFor(title), salary: "", salaryMin: null, salaryMax: null,
-          posted: (j.updated_at || "").slice(0, 10), dateAdded: new Date().toISOString().slice(0, 10),
-          source: "Greenhouse / " + b.label, applyUrl: j.absolute_url, altUrl: "",
+          title: j.title, company: b.label, location: j.loc || (remote ? "Remote" : ""),
+          workMode: remote ? "Remote" : "Hybrid", regions: inCT ? ["Connecticut"] : ["Remote"],
+          roleFamily: rolesFor(j.title), salary: "", salaryMin: null, salaryMax: null,
+          posted: j.posted || "", dateAdded: new Date().toISOString().slice(0, 10),
+          source: b.src + " / " + b.label, applyUrl: j.url, altUrl: "",
           tags: ["Live feed", b.label, remote ? "Remote" : "Onsite/Hybrid"],
-          description: "Live listing pulled directly from " + b.label + "'s careers board.",
-          fit: ""
+          description: "Live listing pulled directly from " + b.label + "'s careers board.", fit: ""
         });
-        if (out.length >= 8) break;
+        if (out.length >= 6) break;
       }
       return out;
     } catch (e) { return []; }

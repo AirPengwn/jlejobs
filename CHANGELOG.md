@@ -3,6 +3,21 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.6.0 — 2026-05-30 — Opportunities redesign (design handoff)
+- **Card:** three-tier volume system. Collapsed face = kicker (optional New/Live + muted
+  type), title, sub (company · location · salary), right-aligned tier-colored **Fit** anchor,
+  one why-line, ≤3 tags + N, quiet hover actions, exception strip. Everything else (full
+  description, why, metadata grid, all tags, status, note, outreach, apply/alt) moved into
+  an in-card **Details drawer** — nothing removed. +N tags expand in place.
+- **Color is now exception-only:** healthy unstarred card = neutrals + teal; green = new/live,
+  coral = dead-link/expire, amber = your star. Removed colored type/verified/snapshot pills.
+- **Header:** compact left-aligned ~58px bar; mobile (≤640px) reflows to two rows with a
+  horizontal scrolling pill tab strip; safe-area insets + viewport-fit=cover for installed PWA.
+- **Filters:** Refine row (Location, Work mode + Min-fit segmented controls, Min salary) always
+  visible; Role family / Skills / Card type / My status behind a "More filters" toggle.
+- **SW cache bumped** (jle-cache-v1.6.0) so restyle ships to installed clients.
+- Other tabs (Pipeline / Map / Grow / Biography / Résumé) unchanged.
+
 ## v1.5.1 — 2026-05-30
 - **Header polish:** removed a stray `margin-left:auto` that was pushing the sync
   status to the right; the ☁ sync indicator now sits centered under the title.

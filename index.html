@@ -11,6 +11,9 @@
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0d1117" />
+  <link rel="apple-touch-icon" href="assets/img/stickman.jpg" />
 </head>
 <body>
   <header class="topbar">
@@ -29,7 +32,9 @@
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="jobs">Opportunities</button>
+      <button class="tab" data-view="pipeline">Pipeline</button>
       <button class="tab" data-view="map">Map</button>
+      <button class="tab" data-view="grow">Grow</button>
       <button class="tab" data-view="bio">Biography</button>
       <button class="tab" data-view="resume">Résumé</button>
     </nav>
@@ -58,7 +63,16 @@
             <option value="title">Title A→Z</option>
           </select>
           <button class="sort-wrap-btn" id="densityBtn" title="Toggle card density">▥ Compact</button>
+          <button class="sort-wrap-btn" id="watchlistBtn" title="Highlight & pin cards matching your keywords">⭐ Watchlist</button>
         </div>
+      </div>
+
+      <div id="digestBanner" class="digest-banner" hidden>
+        <span id="digestText"></span>
+        <span class="digest-actions">
+          <button class="linkbtn" id="digestShow">Show them</button>
+          <button class="linkbtn" id="digestDismiss">Dismiss</button>
+        </span>
       </div>
 
       <div class="filters-bar">
@@ -110,6 +124,17 @@
         <p>No opportunities match your filters.</p>
         <button class="linkbtn" onclick="document.getElementById('clearFiltersBtn').click()">Clear filters</button>
       </div>
+    </section>
+
+    <!-- ============================ PIPELINE VIEW ==================== -->
+    <section id="view-pipeline" class="view">
+      <div id="statsPanel" class="stats-panel"></div>
+      <div id="kanban" class="kanban"></div>
+    </section>
+
+    <!-- ============================ GROW VIEW ======================== -->
+    <section id="view-grow" class="view">
+      <div id="growContent" class="grow"></div>
     </section>
 
     <!-- ============================ MAP VIEW ========================= -->
@@ -183,6 +208,23 @@
     </div>
   </div>
 
+  <!-- ============================ WATCHLIST MODAL ==================== -->
+  <div id="watchModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>⭐ Keyword watchlist</h2>
+        <button class="icon-btn" id="watchClose" title="Close">✕</button>
+      </div>
+      <p class="modal-note">Cards matching any of these terms get a ⭐ highlight and are pinned to the top of the Opportunities list. One term per line or comma-separated. Saved on this device.</p>
+      <textarea id="watchText" class="outreach-text" rows="6" placeholder="LIMS&#10;Platform for Science&#10;scientific informatics&#10;enablement&#10;instructional design"></textarea>
+      <div class="modal-actions">
+        <button class="btn primary" id="watchSave">Save</button>
+        <button class="btn ghost" id="watchClear">Clear all</button>
+      </div>
+      <div class="sync-status" id="watchStatus"></div>
+    </div>
+  </div>
+
   <footer class="sitefoot">
     <span>Private dashboard · hidden from search engines</span>
     <span id="footStamp"></span>
@@ -196,6 +238,7 @@
   <script src="assets/data/bio.js"></script>
   <script src="assets/data/resume.js"></script>
   <script src="assets/data/resume-variants.js"></script>
+  <script src="assets/data/grow.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

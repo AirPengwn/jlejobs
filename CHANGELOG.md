@@ -3,6 +3,21 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.3.0 — 2026-05-30
+- **New "Grow" tab** — researched professional-development & certifications to stay
+  competitive as a Product Owner, with a Product Manager sub-section (adjacent roles
+  John qualifies for), plus AI-PM, domain/data, and free/ongoing options. 19 curated
+  cards across 5 tracks with provider, level, format, approx cost, and a "why it fits."
+- **New "Pipeline" tab** — Kanban board by status (Watching → Interested → Applied →
+  Interviewing → Passed) for cards you're tracking, with move-between-columns, plus a
+  **stats panel** (totals, starred, in-pipeline, new/unseen; bar charts by status,
+  role family, and salary distribution).
+- **"New since last visit" digest** — dismissible banner with a one-click "show them".
+- **Keyword watchlist** — define terms (e.g., LIMS, enablement); matching cards get a
+  ⭐ highlight and pin to the top of Opportunities. Stored per device.
+- **Installable PWA** — web manifest + service worker (network-first, offline fallback)
+  so the dashboard can be added to a home screen and opened full-screen.
+
 ## v1.2.4 — 2026-05-30
 - Added a **"🔁 Run full search update ↗"** button (results bar) that opens the
   cloud refresh routine — one click there runs the full web-search update and

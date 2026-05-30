@@ -1,0 +1,15 @@
+{
+  "name": "JLE Opportunity Dashboard",
+  "short_name": "JLE Jobs",
+  "description": "Private job-opportunity dashboard for John L. Evans",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    { "src": "assets/img/stickman.jpg", "sizes": "any", "type": "image/jpeg", "purpose": "any" },
+    { "src": "assets/img/stickman.jpg", "sizes": "any", "type": "image/jpeg", "purpose": "maskable" }
+  ]
+}

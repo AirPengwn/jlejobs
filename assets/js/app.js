@@ -9,7 +9,7 @@
   const LS = {
     starred: "jle_starred", flagged: "jle_flagged", seen: "jle_seen",
     hidden: "jle_hidden", status: "jle_status", notes: "jle_notes",
-    density: "jle_density"
+    density: "jle_density", watch: "jle_watch", visited: "jle_visited"
   };
 
   const loadSet = (k) => new Set(JSON.parse(localStorage.getItem(k) || "[]"));
@@ -23,6 +23,12 @@
   const hidden  = loadSet(LS.hidden);
   let   status  = loadMap(LS.status); // {id: statusKey}
   let   notes   = loadMap(LS.notes);  // {id: text}
+  let   watchTerms = JSON.parse(localStorage.getItem(LS.watch) || "[]"); // [lowercase terms]
+  const matchesWatch = (j) => {
+    if (!watchTerms.length) return false;
+    const hay = [j.title, j.company, (j.tags || []).join(" "), (j.roleFamily || []).join(" "), j.description, j.fit].join(" ").toLowerCase();
+    return watchTerms.some((t) => t && hay.includes(t));
+  };
 
   const STATUS = [
     { key: "watching",     label: "Watching" },
@@ -225,7 +231,7 @@
     const statusOpts = `<option value="">— set status —</option>` + STATUS.map((s) => `<option value="${s.key}"${s.key === st ? " selected" : ""}>${esc(s.label)}</option>`).join("");
 
     return `
-    <article class="card${isNew(j) ? " is-new" : ""}${st ? " has-status st-border-" + st : ""}${hidden.has(j.id) ? " is-hidden" : ""}" data-id="${esc(j.id)}">
+    <article class="card${isNew(j) ? " is-new" : ""}${st ? " has-status st-border-" + st : ""}${hidden.has(j.id) ? " is-hidden" : ""}${matchesWatch(j) ? " is-watched" : ""}" data-id="${esc(j.id)}">
       <div class="card-head">
         <div>
           <h3 class="card-title">${esc(j.title)}</h3>
@@ -239,7 +245,7 @@
         </div>
       </div>
 
-      <div class="badges">${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${stBadge}</div>
+      <div class="badges">${matchesWatch(j) ? `<span class="badge watch">⭐ watch</span>` : ""}${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${stBadge}</div>
 
       <div class="meta-row">
         <span class="m">📍 ${esc(j.location)}</span>
@@ -269,7 +275,8 @@
 
   function render() {
     fitMax = Math.max(1, ...ALL.map(rawFit));
-    const list = sortJobs(ALL.filter(matches));
+    let list = sortJobs(ALL.filter(matches));
+    if (watchTerms.length) { const w = list.filter(matchesWatch), r = list.filter((j) => !matchesWatch(j)); list = w.concat(r); }
     const cards = document.getElementById("cards");
     cards.innerHTML = list.map(cardHTML).join("");
     document.getElementById("emptyState").hidden = list.length > 0;
@@ -585,6 +592,122 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     document.getElementById("mapNote").textContent = `${Object.values(byCity).flat().length} Connecticut opportunities mapped (gold = home).`;
   }
 
+  // ============================ Grow (PD) ===================================
+  function renderGrow() {
+    const g = window.GROW; if (!g) return;
+    const groups = g.groups.map((grp) => {
+      const cards = grp.items.map((it) => `
+        <div class="grow-card">
+          <div class="grow-head"><span class="grow-name">${esc(it.name)}</span><span class="grow-provider">${esc(it.provider)}</span></div>
+          <div class="grow-meta">
+            ${it.level ? `<span class="gm">📈 ${esc(it.level)}</span>` : ""}
+            ${it.format ? `<span class="gm">🧩 ${esc(it.format)}</span>` : ""}
+            ${it.cost ? `<span class="gm">💵 ${esc(it.cost)}</span>` : ""}
+            ${it.time ? `<span class="gm">⏱ ${esc(it.time)}</span>` : ""}
+          </div>
+          ${it.why ? `<div class="grow-why">${esc(it.why)}</div>` : ""}
+          <a class="btn primary" href="${esc(it.url)}" target="_blank" rel="noopener">Learn more ↗</a>
+        </div>`).join("");
+      return `<div class="grow-group"><h2>${esc(grp.title)}</h2>${grp.note ? `<p class="grow-note">${esc(grp.note)}</p>` : ""}<div class="grow-grid">${cards}</div></div>`;
+    }).join("");
+    document.getElementById("growContent").innerHTML =
+      `<div class="grow-intro">${esc(g.intro)}</div>${groups}
+       <p class="resume-foot-note">Costs and links are approximate (mid-2026) — confirm on each provider's site. You already hold Certified SAFe Product Owner / Product Manager (POPM).</p>`;
+  }
+
+  // ============================ Pipeline + Stats ============================
+  function renderStats() {
+    const el = document.getElementById("statsPanel"); if (!el) return;
+    const tracked = ALL.filter((j) => status[j.id]);
+    const byStatus = STATUS.map((s) => ({ label: s.label, key: s.key, n: ALL.filter((j) => status[j.id] === s.key).length }));
+    const famCount = {};
+    ALL.forEach((j) => (j.roleFamily || []).forEach((f) => (famCount[f] = (famCount[f] || 0) + 1)));
+    const fams = Object.entries(famCount).sort((a, b) => b[1] - a[1]);
+    const famMax = Math.max(1, ...fams.map((f) => f[1]));
+    const buckets = [[0, 75000, "< $75k"], [75000, 100000, "$75–100k"], [100000, 130000, "$100–130k"], [130000, 160000, "$130–160k"], [160000, 200000, "$160–200k"], [200000, 1e9, "$200k+"]];
+    const withSal = ALL.filter((j) => j.salaryMax || j.salaryMin);
+    const hist = buckets.map(([lo, hi, label]) => ({ label, n: withSal.filter((j) => { const v = j.salaryMax || j.salaryMin; return v >= lo && v < hi; }).length }));
+    const histMax = Math.max(1, ...hist.map((h) => h.n));
+    const newCount = ALL.filter(isNew).length;
+    el.innerHTML = `
+      <div class="stat-cards">
+        <div class="stat"><div class="stat-num">${ALL.length}</div><div class="stat-lbl">Total opportunities</div></div>
+        <div class="stat"><div class="stat-num">${starred.size}</div><div class="stat-lbl">★ Starred</div></div>
+        <div class="stat"><div class="stat-num">${tracked.length}</div><div class="stat-lbl">In your pipeline</div></div>
+        <div class="stat"><div class="stat-num">${newCount}</div><div class="stat-lbl">New / unseen</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stats-block"><h3>By status</h3>${byStatus.map((s) => `<div class="bar-row"><span class="bar-lbl">${esc(s.label)}</span><span class="bar"><span class="bar-fill st-${s.key}" style="width:${s.n ? Math.max(6, (s.n / Math.max(1, tracked.length)) * 100) : 0}%"></span></span><span class="bar-n">${s.n}</span></div>`).join("")}</div>
+        <div class="stats-block"><h3>By role family</h3>${fams.map(([f, n]) => `<div class="bar-row"><span class="bar-lbl">${esc(f)}</span><span class="bar"><span class="bar-fill" style="width:${(n / famMax) * 100}%"></span></span><span class="bar-n">${n}</span></div>`).join("")}</div>
+        <div class="stats-block"><h3>Salary distribution</h3>${hist.map((h) => `<div class="bar-row"><span class="bar-lbl">${esc(h.label)}</span><span class="bar"><span class="bar-fill amber" style="width:${(h.n / histMax) * 100}%"></span></span><span class="bar-n">${h.n}</span></div>`).join("")}</div>
+      </div>`;
+  }
+  function renderPipeline() {
+    renderStats();
+    const kb = document.getElementById("kanban"); if (!kb) return;
+    const tracked = ALL.filter((j) => status[j.id]);
+    if (!tracked.length) {
+      kb.innerHTML = `<div class="empty-state"><p>Your pipeline is empty. Set a <b>status</b> on cards in the Opportunities tab (Watching → Interested → Applied → Interviewing → Passed) and they'll appear here as columns.</p></div>`;
+      return;
+    }
+    kb.innerHTML = STATUS.map((s) => {
+      const items = ALL.filter((j) => status[j.id] === s.key);
+      const cards = items.map((j) => `
+        <div class="kard st-border-${s.key}" data-id="${esc(j.id)}">
+          <div class="kard-title">${esc(j.title)}</div>
+          <div class="kard-co">${esc(j.company)}</div>
+          <div class="kard-meta">${j.salary ? esc(j.salary) : esc(j.location)}</div>
+          <div class="kard-foot">
+            <select class="kard-status" data-act="kstatus">${STATUS.map((o) => `<option value="${o.key}"${o.key === s.key ? " selected" : ""}>${esc(o.label)}</option>`).join("")}<option value="">— remove —</option></select>
+            <a href="${esc(j.applyUrl)}" target="_blank" rel="noopener" title="Open ↗">↗</a>
+          </div>
+        </div>`).join("");
+      return `<div class="kanban-col"><div class="kanban-col-head st-${s.key}">${esc(s.label)} <span>${items.length}</span></div><div class="kanban-col-body">${cards || '<div class="kanban-empty">—</div>'}</div></div>`;
+    }).join("");
+    kb.querySelectorAll(".kard-status").forEach((sel) => {
+      sel.addEventListener("change", () => {
+        const id = sel.closest(".kard").dataset.id;
+        if (sel.value) status[id] = sel.value; else delete status[id];
+        saveMap(LS.status, status); scheduleSync(); buildStatusFilter(); renderPipeline(); render();
+      });
+    });
+  }
+
+  // ============================ digest + watchlist ==========================
+  function updateDigest() {
+    const banner = document.getElementById("digestBanner"); if (!banner) return;
+    const visited = localStorage.getItem(LS.visited);
+    const newCount = ALL.filter(isNew).length;
+    if (visited && newCount > 0) {
+      document.getElementById("digestText").textContent = `🟢 ${newCount} new opportunit${newCount === 1 ? "y" : "ies"} since your last visit.`;
+      banner.hidden = false;
+    } else { banner.hidden = true; }
+    localStorage.setItem(LS.visited, "1");
+  }
+  function initWatchlistUI() {
+    const modal = document.getElementById("watchModal");
+    document.getElementById("watchlistBtn").addEventListener("click", () => {
+      document.getElementById("watchText").value = watchTerms.join("\n");
+      document.getElementById("watchStatus").textContent = watchTerms.length ? `${watchTerms.length} term(s) active.` : "";
+      modal.hidden = false;
+    });
+    document.getElementById("watchClose").addEventListener("click", () => { modal.hidden = true; });
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.hidden = true; });
+    document.getElementById("watchSave").addEventListener("click", () => {
+      watchTerms = document.getElementById("watchText").value.split(/[\n,]/).map((t) => t.trim().toLowerCase()).filter(Boolean);
+      localStorage.setItem(LS.watch, JSON.stringify(watchTerms));
+      document.getElementById("watchStatus").textContent = `Saved — ${watchTerms.length} term(s) active.`;
+      document.getElementById("watchlistBtn").classList.toggle("on", watchTerms.length > 0);
+      render();
+    });
+    document.getElementById("watchClear").addEventListener("click", () => {
+      watchTerms = []; localStorage.removeItem(LS.watch);
+      document.getElementById("watchText").value = ""; document.getElementById("watchStatus").textContent = "Cleared.";
+      document.getElementById("watchlistBtn").classList.remove("on"); render();
+    });
+    if (watchTerms.length) document.getElementById("watchlistBtn").classList.add("on");
+  }
+
   // ============================ wiring ======================================
   function init() {
     document.getElementById("tabs").addEventListener("click", (e) => {
@@ -595,6 +718,8 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
       document.getElementById("view-" + view).classList.add("active");
       if (view === "map") setTimeout(initMap, 60);
+      if (view === "pipeline") renderPipeline();
+      if (view === "grow") renderGrow();
     });
 
     refreshFacets();
@@ -646,7 +771,18 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     const bv = document.getElementById("brandVersion");
     if (bv && window.APP_VERSION) bv.textContent = "v" + window.APP_VERSION;
 
-    renderBio(); renderResume(); initSyncUI(); render();
+    renderBio(); renderResume(); initSyncUI(); initWatchlistUI(); render();
+
+    // digest banner ("new since last visit")
+    document.getElementById("digestShow").addEventListener("click", () => {
+      if (!state.toggles.new) { state.toggles.new = true; document.querySelector('.toggle[data-toggle="new"]').classList.add("active"); render(); }
+      document.getElementById("digestBanner").hidden = true;
+    });
+    document.getElementById("digestDismiss").addEventListener("click", () => { document.getElementById("digestBanner").hidden = true; });
+    updateDigest();
+
+    // PWA service worker (https/localhost only)
+    if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {})); }
 
     // refocus pull
     document.addEventListener("visibilitychange", () => {

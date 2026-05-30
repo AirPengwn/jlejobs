@@ -73,34 +73,18 @@
       </div>
 
       <div class="filters-bar">
-        <div class="filter-group wide" id="filter-roleFamily">
-          <div class="filter-label">Role family</div>
-          <div class="filter-chips"></div>
-        </div>
-        <div class="filter-group wide" id="filter-skills">
-          <div class="filter-label">Skills / keywords</div>
-          <div class="filter-chips"></div>
-        </div>
-        <div class="filter-row">
+        <div class="rf-refine">
           <div class="filter-group" id="filter-regions">
             <div class="filter-label">Location</div>
             <div class="filter-chips"></div>
           </div>
           <div class="filter-group" id="filter-workMode">
             <div class="filter-label">Work mode</div>
-            <div class="filter-chips"></div>
-          </div>
-          <div class="filter-group" id="filter-kind">
-            <div class="filter-label">Card type</div>
-            <div class="filter-chips"></div>
-          </div>
-          <div class="filter-group" id="filter-status">
-            <div class="filter-label">My status</div>
-            <div class="filter-chips"></div>
+            <div class="filter-chips seg"></div>
           </div>
           <div class="filter-group" id="filter-minfit">
             <div class="filter-label">Minimum fit</div>
-            <div class="filter-chips">
+            <div class="filter-chips seg">
               <button class="chip active" data-fit="0">Any</button>
               <button class="chip" data-fit="50">50+</button>
               <button class="chip" data-fit="70">70+</button>
@@ -111,6 +95,27 @@
             <div class="filter-label">Minimum salary <span id="salaryReadout" class="salary-readout">Any</span></div>
             <input type="range" id="salaryRange" min="0" max="225000" step="5000" value="0" />
             <div class="salary-scale"><span>$0</span><span>$225k+</span></div>
+          </div>
+          <button class="rf-more" id="moreFiltersBtn" type="button">＋ More filters ▾</button>
+        </div>
+        <div class="filters-more" id="filtersMore" hidden>
+          <div class="filter-group wide" id="filter-roleFamily">
+            <div class="filter-label">Role family</div>
+            <div class="filter-chips"></div>
+          </div>
+          <div class="filter-group wide" id="filter-skills">
+            <div class="filter-label">Skills / keywords</div>
+            <div class="filter-chips"></div>
+          </div>
+          <div class="filter-row">
+            <div class="filter-group" id="filter-kind">
+              <div class="filter-label">Card type</div>
+              <div class="filter-chips"></div>
+            </div>
+            <div class="filter-group" id="filter-status">
+              <div class="filter-label">My status</div>
+              <div class="filter-chips"></div>
+            </div>
           </div>
         </div>
       </div>

@@ -675,3 +675,23 @@ body.compact .card-title { font-size: 14.5px; }
   .tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .tab.active::after { display: none; }
 }
+
+/* ============================================================================
+   v1.6 — filters: Refine row + collapsible More + segmented controls
+   ========================================================================== */
+.filters-bar { background: transparent; border: none; padding: 0; gap: 12px; }
+.rf-refine { display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap; padding: 13px 15px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.rf-refine .filter-group { margin: 0; }
+.rf-refine .salary-group { min-width: 150px; }
+.rf-refine #salaryRange { width: 140px; }
+.rf-more { margin-left: auto; align-self: center; background: transparent; border: 1px dashed var(--border-2); color: var(--text-dim); border-radius: 9px; padding: 8px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.rf-more:hover { color: var(--text); border-color: var(--text-mute); }
+.filters-more { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.filters-more[hidden] { display: none; }
+/* segmented control — Minimum fit & Work mode */
+.filter-chips.seg { display: inline-flex; flex-wrap: nowrap; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.filter-chips.seg .chip { background: var(--surface); color: var(--text-dim); border: none; border-right: 1px solid var(--border); border-radius: 0; padding: 6px 12px; }
+.filter-chips.seg .chip:last-child { border-right: none; }
+.filter-chips.seg .chip:hover { color: var(--text); background: var(--surface-2); }
+.filter-chips.seg .chip.active { background: var(--accent); color: var(--accent-ink); }
+.filter-chips.seg .chip-count { opacity: .7; }

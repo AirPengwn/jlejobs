@@ -952,6 +952,13 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     });
     if (localStorage.getItem(LS.density) === "compact") { document.body.classList.add("compact"); document.getElementById("densityBtn").textContent = "▤ Comfortable"; }
 
+    // "More filters" toggle (advanced filter groups, collapsed by default)
+    document.getElementById("moreFiltersBtn").addEventListener("click", () => {
+      const more = document.getElementById("filtersMore");
+      more.hidden = !more.hidden;
+      document.getElementById("moreFiltersBtn").textContent = more.hidden ? "＋ More filters ▾" : "− Fewer filters ▴";
+    });
+
     // minimum-fit chips (single-select)
     document.querySelectorAll("#filter-minfit .chip").forEach((chip) => {
       chip.addEventListener("click", () => {

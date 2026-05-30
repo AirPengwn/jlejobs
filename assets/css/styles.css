@@ -630,3 +630,48 @@ body.compact .card-title { font-size: 14.5px; }
 .rd-foot { display: flex; gap: 8px; }
 .rd-foot .btn { flex: 1; text-align: center; }
 .rd-foot .btn.dead { flex: 0 0 auto; color: var(--n-coral); border-color: rgba(255,123,114,.4); cursor: not-allowed; }
+
+/* ============================================================================
+   v1.6 — compact left-aligned header + mobile/PWA reflow (overrides earlier)
+   ========================================================================== */
+.topbar {
+  flex-direction: row; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: calc(11px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 11px calc(20px + env(safe-area-inset-left));
+  background: rgba(13,17,23,.92);
+}
+.avatar { width: 34px; height: 34px; padding: 2px; border-width: 1.5px; box-shadow: none; order: 1; }
+.brand { display: flex; flex-direction: column; gap: 0; align-items: flex-start; text-align: left; justify-content: flex-start; min-width: 0; order: 2; }
+.brand-title { margin: 0; font-size: 15.5px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: baseline; gap: 8px; }
+.brand-version { font-size: 10px; font-weight: 600; color: var(--text-mute); background: transparent; border: none; border-radius: 0; padding: 0; letter-spacing: .3px; }
+.brand-sub { font-size: 11.5px; color: var(--text-mute); }
+.tabs { order: 3; margin-left: 8px; gap: 2px; justify-content: flex-start; flex-wrap: nowrap; }
+.tab { background: transparent; border: none; border-radius: 0; color: var(--text-dim); padding: 6px 12px; font-size: 13px; font-weight: 600; position: relative; }
+.tab:hover { background: transparent; color: var(--text); }
+.tab.active { background: transparent; border: none; color: var(--accent); }
+.tab.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -11px; height: 2px; background: var(--accent); border-radius: 2px; }
+.topbar-right { order: 4; margin-left: auto; width: auto; justify-content: flex-end; }
+.sync-btn { font-size: 12px; padding: 5px 10px; }
+
+@media (max-width: 640px) {
+  .topbar {
+    gap: 9px 12px;
+    padding: calc(9px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 9px calc(14px + env(safe-area-inset-left));
+  }
+  .avatar { width: 28px; height: 28px; order: 1; }
+  .brand { order: 2; flex: 1; }
+  .brand-title { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-sub { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { order: 3; margin-left: auto; }
+  .tabs {
+    order: 4; flex: 1 0 100%; margin-left: 0; gap: 6px; padding-bottom: 2px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 14px; min-height: 40px; color: var(--text-dim);
+  }
+  .tab.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .tab.active::after { display: none; }
+}

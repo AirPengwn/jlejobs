@@ -1,11 +1,18 @@
 # Changelog
 
+Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
+(which is what GitHub Pages serves).
+
+## v1.2.4 — 2026-05-30
+- Added a **"🔁 Run full search update ↗"** button (results bar) that opens the
+  cloud refresh routine — one click there runs the full web-search update and
+  pushes results. A public static page can't trigger the cloud agent directly
+  without exposing credentials, so this is the secure path. "🔄 Refresh live"
+  still does instant in-browser company-board refresh.
+
 ## v1.2.3 — 2026-05-30
 - Added 7 new specific job-posting cards (monthly refresh): Leidos Agile Product Owner (PO/Scrum, remote), Beckman Coulter/Danaher Learning Experience Designer-Developer (ID/L&D, remote, $110k–$120k + bonus), Veeva Systems LIMS Implementation Consultant (LIMS/Informatics, remote), Veeva Systems Technical Writer–Vault (Technical Writing, remote), Sorcero Customer Success Manager (Customer Education, remote, $110k–$125k), Salesforce Customer Success Manager Life Sciences (Customer Education, remote, $123k–$227k), Experian Health Product Owner–Health SaaS (PO, remote).
 - All new cards are `kind:"posting"`, `status:"snapshot"`, `dateAdded:"2026-05-30"`; covers Product Owner, Instructional Design, Technical Writing, LIMS/Informatics, Customer Education/Enablement, and Solutions/Implementation families.
-
-Versioning starts here. Each update ships on its own `vX.Y.Z` branch and is then
-merged to `main` (which is what GitHub Pages serves).
 
 ## v1.2.2 — 2026-05-30
 - Added `CLAUDE.md` — a project guide so any Claude session (any machine) is

@@ -152,6 +152,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 22px; }
   cursor: pointer; font-size: 13px; font-weight: 600; padding: 0;
 }
 .linkbtn:hover { text-decoration: underline; }
+a.linkbtn { text-decoration: none; }
+.linkbtn.full-update { color: var(--indigo); }
 
 /* --------------------------------- Cards --------------------------------- */
 .cards-grid {

@@ -3,6 +3,12 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.6.3 — 2026-05-30
+- **Fixed a mobile layout bug:** the search box was rendering ~320px tall on phones
+  (the toolbar becomes a flex column there, so `.search-wrap`'s `flex-basis:320px`
+  applied to height), leaving a huge empty gap above the filter chips. Now content-height.
+  (SW cache → jle-cache-v1.6.3.)
+
 ## v1.6.2 — 2026-05-30
 - **Re-centered the header** (owner preference): desktop is back to a centered stacked
   masthead — avatar + title, subtitle, sync/update chips, and nav tabs all centered.

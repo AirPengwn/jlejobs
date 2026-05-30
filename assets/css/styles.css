@@ -531,8 +531,10 @@ body.compact .card-title { font-size: 14.5px; }
 /* ------------------------------- Responsive ------------------------------ */
 @media (max-width: 680px) {
   .topbar { flex-wrap: wrap; gap: 12px; }
-  .topbar-right { width: 100%; margin-left: 0; }
   .toolbar { flex-direction: column; align-items: stretch; }
+  /* in a column toolbar, flex-basis maps to HEIGHT — kill the 320px so the search
+     input isn't 320px tall (was creating a huge empty gap on phones) */
+  .search-wrap { flex: 0 0 auto; }
   .sort-wrap { justify-content: space-between; }
 }
 

@@ -19,8 +19,10 @@
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="jobs">Opportunities</button>
       <button class="tab" data-view="bio">Biography</button>
+      <button class="tab" data-view="resume">Résumé</button>
     </nav>
     <div class="topbar-right">
+      <button class="sync-btn" id="syncBtn" title="Sync starred/flagged across devices">☁ <span id="syncState">Sync off</span></button>
       <span class="updated" id="updatedStamp"></span>
     </div>
   </header>
@@ -86,7 +88,48 @@
     <section id="view-bio" class="view">
       <div id="bioContent" class="bio"></div>
     </section>
+
+    <!-- ============================ RESUME VIEW ====================== -->
+    <section id="view-resume" class="view">
+      <div id="resumeContent" class="bio"></div>
+    </section>
   </main>
+
+  <!-- ============================ SYNC MODAL ========================= -->
+  <div id="syncModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>☁ Cross-device sync (JSONBin)</h2>
+        <button class="icon-btn" id="syncClose" title="Close">✕</button>
+      </div>
+      <p class="modal-note">
+        Save your ★ starred, ⚑ flagged, and "seen" state to a free
+        <a href="https://jsonbin.io" target="_blank" rel="noopener">JSONBin.io</a> bin so it
+        follows you across devices. Your key is stored only in this browser — it is
+        <b>never</b> committed to the public site. Enter the same Bin&nbsp;ID + key on each device.
+      </p>
+      <ol class="modal-steps">
+        <li>Create a free account at <b>jsonbin.io</b>.</li>
+        <li>Click <b>Create Bin</b>, paste <code>{"starred":[],"flagged":[],"seen":[]}</code>, save. Copy the <b>Bin&nbsp;ID</b> from the URL.</li>
+        <li>Go to <b>API Keys → Access Keys</b>, create a key with <b>Read</b> + <b>Update</b> permission. Copy it.</li>
+        <li>Paste both below and click <b>Save &amp; sync</b>.</li>
+      </ol>
+      <label class="fld"><span>Bin ID</span><input type="text" id="binId" placeholder="e.g. 66ab12cd3e4f..." autocomplete="off" /></label>
+      <label class="fld"><span>Key</span><input type="password" id="binKey" placeholder="paste your key" autocomplete="off" /></label>
+      <label class="fld fld-row"><span>Key type</span>
+        <select id="binKeyType">
+          <option value="access">Access Key (recommended)</option>
+          <option value="master">Master Key</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn primary" id="syncSave">Save &amp; sync</button>
+        <button class="btn ghost" id="syncNow">Sync now</button>
+        <button class="btn ghost" id="syncDisable">Turn off &amp; forget key</button>
+      </div>
+      <div class="sync-status" id="syncStatus"></div>
+    </div>
+  </div>
 
   <footer class="sitefoot">
     <span>Private dashboard · hidden from search engines</span>
@@ -95,6 +138,7 @@
 
   <script src="assets/data/jobs.js"></script>
   <script src="assets/data/bio.js"></script>
+  <script src="assets/data/resume.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

@@ -23,6 +23,66 @@
   // First-ever visit: treat everything as already seen EXCEPT nothing — we want
   // the user to see the initial batch as "new", so leave `seen` empty on first run.
 
+  // ===================== JSONBin cross-device sync ==========================
+  // Config lives ONLY in localStorage (never committed to the public site).
+  const SYNC_KEY = "jle_jsonbin";
+  const sync = {
+    cfg: JSON.parse(localStorage.getItem(SYNC_KEY) || "null"), // {binId, key, keyType}
+    timer: null, pushing: false,
+    on() { return !!(this.cfg && this.cfg.binId && this.cfg.key); },
+    headers() {
+      const h = { "Content-Type": "application/json" };
+      h[this.cfg.keyType === "master" ? "X-Master-Key" : "X-Access-Key"] = this.cfg.key;
+      return h;
+    },
+    save(cfg) { this.cfg = cfg; localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); },
+    forget() { this.cfg = null; localStorage.removeItem(SYNC_KEY); }
+  };
+
+  function setSyncState(text) {
+    const el = document.getElementById("syncState");
+    if (el) el.textContent = text;
+  }
+  function syncStatus(msg, kind) {
+    const el = document.getElementById("syncStatus");
+    if (el) { el.textContent = msg; el.className = "sync-status " + (kind || ""); }
+  }
+
+  async function syncPull() {
+    if (!sync.on()) return false;
+    const url = "https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId) + "/latest";
+    const res = await fetch(url, { headers: sync.headers() });
+    if (!res.ok) throw new Error("Pull failed (HTTP " + res.status + ")");
+    const data = await res.json();
+    const rec = (data && data.record) || {};
+    // starred/flagged: adopt remote (last-write-wins). seen: union (only grows).
+    if (Array.isArray(rec.starred)) { starred.clear(); rec.starred.forEach((x) => starred.add(x)); }
+    if (Array.isArray(rec.flagged)) { flagged.clear(); rec.flagged.forEach((x) => flagged.add(x)); }
+    if (Array.isArray(rec.seen)) rec.seen.forEach((x) => seen.add(x));
+    // write merged result back to local cache
+    save(LS.starred, starred); save(LS.flagged, flagged); save(LS.seen, seen);
+    return true;
+  }
+
+  async function syncPush() {
+    if (!sync.on()) return false;
+    const body = JSON.stringify({ starred: [...starred], flagged: [...flagged], seen: [...seen] });
+    const url = "https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId);
+    const res = await fetch(url, { method: "PUT", headers: sync.headers(), body });
+    if (!res.ok) throw new Error("Push failed (HTTP " + res.status + ")");
+    return true;
+  }
+
+  function scheduleSync() {
+    if (!sync.on()) return;
+    clearTimeout(sync.timer);
+    setSyncState("syncing…");
+    sync.timer = setTimeout(async () => {
+      try { await syncPush(); setSyncState("synced ✓"); }
+      catch (e) { setSyncState("sync error"); }
+    }, 1200);
+  }
+
   const JOBS = window.JOBS || [];
 
   // ---- active filter state --------------------------------------------------
@@ -183,6 +243,7 @@
         set.has(id) ? set.delete(id) : set.add(id);
         save(act === "star" ? LS.starred : LS.flagged, set);
         btn.classList.toggle("on");
+        scheduleSync();
       });
     });
   }
@@ -231,6 +292,101 @@
       <div class="bio-section"><h2>Education</h2>${edu}</div>`;
   }
 
+  // ====================== RESUME RENDER ======================================
+  function renderResume() {
+    const r = window.RESUME;
+    if (!r) return;
+    const comp = r.competencies.map((c) => `
+      <div class="skill-card">
+        <h3>${esc(c.group)}</h3>
+        <div class="pills">${c.items.map((i) => `<span class="pill">${esc(i)}</span>`).join("")}</div>
+      </div>`).join("");
+    const exp = r.experience.map((e) => `
+      <div class="job-entry">
+        <div class="je-head">
+          <div><span class="je-role">${esc(e.role)}</span> &nbsp;<span class="je-co">${esc(e.company)} · ${esc(e.where)}</span></div>
+          <div class="je-dates">${esc(e.dates)}</div>
+        </div>
+        <ul>${e.bullets.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+      </div>`).join("");
+    const edu = r.education.map((e) => `
+      <div class="edu-item">
+        <div><div class="deg">${esc(e.deg)}</div><div class="school">${esc(e.school)}</div></div>
+        <div class="yr">${esc(e.yr)}</div>
+      </div>`).join("");
+
+    document.getElementById("resumeContent").innerHTML = `
+      <div class="bio-hero">
+        <div class="resume-top">
+          <div>
+            <h1>${esc(r.name)}</h1>
+            <div class="tagline">${esc(r.title)}</div>
+            <div class="contact">
+              <span>📍 ${esc(r.contact.location)}</span>
+              <a href="mailto:${esc(r.contact.email)}">✉ ${esc(r.contact.email)}</a>
+              <span>📞 ${esc(r.contact.phone)}</span>
+            </div>
+          </div>
+          <a class="btn primary dl" href="${esc(r.downloadFile)}" download>⬇ Download Word résumé</a>
+        </div>
+        <p class="summary">${esc(r.summary)}</p>
+      </div>
+      <div class="bio-section"><h2>Core Competencies</h2><div class="skill-grid">${comp}</div></div>
+      <div class="bio-section"><h2>Professional Experience</h2>${exp}</div>
+      <div class="bio-section"><h2>Certifications</h2>
+        <div class="tag-row">${r.certifications.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div>
+      </div>
+      <div class="bio-section"><h2>Education</h2>${edu}</div>
+      <p class="resume-foot-note">This is an AI-restructured version of your résumé (modern format, achievement-oriented).
+      The downloadable Word file matches it. Street address intentionally omitted per current best practice.</p>`;
+  }
+
+  // ====================== SYNC MODAL WIRING ==================================
+  function initSyncUI() {
+    const modal = document.getElementById("syncModal");
+    const open = () => {
+      if (sync.cfg) {
+        document.getElementById("binId").value = sync.cfg.binId || "";
+        document.getElementById("binKey").value = sync.cfg.key || "";
+        document.getElementById("binKeyType").value = sync.cfg.keyType || "access";
+      }
+      syncStatus(sync.on() ? "Sync is ON for this browser." : "", "");
+      modal.hidden = false;
+    };
+    const close = () => { modal.hidden = true; };
+
+    document.getElementById("syncBtn").addEventListener("click", open);
+    document.getElementById("syncClose").addEventListener("click", close);
+    modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+
+    document.getElementById("syncSave").addEventListener("click", async () => {
+      const binId = document.getElementById("binId").value.trim();
+      const key = document.getElementById("binKey").value.trim();
+      const keyType = document.getElementById("binKeyType").value;
+      if (!binId || !key) { syncStatus("Enter both a Bin ID and a key.", "err"); return; }
+      sync.save({ binId, key, keyType });
+      syncStatus("Saved. Syncing…", "");
+      try {
+        await syncPull(); await syncPush();
+        setSyncState("synced ✓"); syncStatus("Connected and synced ✓", "ok"); render();
+      } catch (e) { setSyncState("sync error"); syncStatus(String(e.message || e), "err"); }
+    });
+
+    document.getElementById("syncNow").addEventListener("click", async () => {
+      if (!sync.on()) { syncStatus("Save a Bin ID + key first.", "err"); return; }
+      syncStatus("Syncing…", "");
+      try { await syncPull(); await syncPush(); setSyncState("synced ✓"); syncStatus("Synced ✓", "ok"); render(); }
+      catch (e) { setSyncState("sync error"); syncStatus(String(e.message || e), "err"); }
+    });
+
+    document.getElementById("syncDisable").addEventListener("click", () => {
+      sync.forget();
+      document.getElementById("binId").value = "";
+      document.getElementById("binKey").value = "";
+      setSyncState("Sync off"); syncStatus("Turned off; key removed from this browser.", "");
+    });
+  }
+
   // ====================== WIRING =============================================
   function init() {
     // tabs
@@ -275,6 +431,7 @@
     document.getElementById("markSeenBtn").addEventListener("click", () => {
       JOBS.forEach((j) => seen.add(j.id));
       save(LS.seen, seen);
+      scheduleSync();
       render();
     });
 
@@ -293,7 +450,17 @@
     document.getElementById("footStamp").textContent = stamp;
 
     renderBio();
+    renderResume();
+    initSyncUI();
     render();
+
+    // If sync configured, pull remote state then re-render.
+    if (sync.on()) {
+      setSyncState("syncing…");
+      syncPull()
+        .then(() => { setSyncState("synced ✓"); render(); })
+        .catch(() => setSyncState("sync error"));
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -699,3 +699,17 @@ body.compact .card-title { font-size: 14.5px; }
 .filter-chips.seg .chip:hover { color: var(--text); background: var(--surface-2); }
 .filter-chips.seg .chip.active { background: var(--accent); color: var(--accent-ink); }
 .filter-chips.seg .chip-count { opacity: .7; }
+
+/* ============================================================================
+   v1.6.4 — mobile-only "cards-first": collapse sort + filters + presets behind
+   the ⚙ Filters toggle so phones land on search + view chips + cards.
+   Desktop is unaffected (the toggle is hidden and nothing is collapsed ≥641px).
+   ========================================================================== */
+.m-filters-toggle { display: none; }
+@media (max-width: 640px) {
+  .m-filters-toggle { display: inline-flex; align-items: center; align-self: flex-start; }
+  .sort-wrap, .filters-bar, .presets-bar { display: none; }
+  body.m-filters-open .sort-wrap { display: flex; }
+  body.m-filters-open .filters-bar { display: flex; }
+  body.m-filters-open .presets-bar { display: flex; }
+}

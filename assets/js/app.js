@@ -959,6 +959,13 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       document.getElementById("moreFiltersBtn").textContent = more.hidden ? "＋ More filters ▾" : "− Fewer filters ▴";
     });
 
+    // mobile-only "cards-first": toggle the bulky filter/sort/preset chrome
+    const mft = document.getElementById("mFiltersToggle");
+    if (mft) mft.addEventListener("click", () => {
+      const open = document.body.classList.toggle("m-filters-open");
+      mft.textContent = open ? "⚙ Filters & sort ▴" : "⚙ Filters & sort ▾";
+    });
+
     // minimum-fit chips (single-select)
     document.querySelectorAll("#filter-minfit .chip").forEach((chip) => {
       chip.addEventListener("click", () => {

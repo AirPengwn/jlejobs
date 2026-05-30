@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.6.4 — 2026-05-30
+- **Mobile "cards-first" (iPhone only):** on ≤640px screens the sort bar, Refine/More
+  filters, and presets collapse behind a single **⚙ Filters & sort** toggle, so phones
+  land on search + view chips + opportunity cards (first card ~394px down, was ~768px).
+  Desktop is unchanged — the toggle is hidden and nothing collapses ≥641px.
+  (SW cache → jle-cache-v1.6.4.)
+
 ## v1.6.3 — 2026-05-30
 - **Fixed a mobile layout bug:** the search box was rendering ~320px tall on phones
   (the toolbar becomes a flex column there, so `.search-wrap`'s `flex-basis:320px`

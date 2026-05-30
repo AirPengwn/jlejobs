@@ -334,6 +334,7 @@ a.linkbtn { text-decoration: none; }
 /* badges */
 .badge.live { background: rgba(63,185,80,.16); color: #7ee695; border: 1px solid rgba(63,185,80,.4); }
 .badge.expiring { background: rgba(255,166,87,.13); color: #ffc078; border: 1px solid rgba(255,166,87,.35); }
+.badge.dead { background: rgba(255,123,114,.16); color: #ffb1ac; border: 1px solid rgba(255,123,114,.45); }
 .badge.st { color: #0d1117; font-weight: 800; }
 .badge.st-watching    { background: #8b97a8; }
 .badge.st-interested  { background: var(--accent); }

@@ -222,6 +222,7 @@
     const statusBadge = j.status === "verified" ? `<span class="badge verified">✓ verified</span>`
       : j.status === "snapshot" ? `<span class="badge snapshot">snapshot</span>` : "";
     const expBadge = mayBeExpired(j) ? `<span class="badge expiring" title="Posting is older than 45 days — may be expired">⚠ may be expired</span>` : "";
+    const deadBadge = j.linkStatus === "dead" ? `<span class="badge dead" title="Apply link returned 404/gone on last automated check${j.linkChecked ? " (" + esc(j.linkChecked) + ")" : ""}">⛔ link dead</span>` : "";
     const stBadge = st ? `<span class="badge st st-${st}">${esc(statusLabel(st))}</span>` : "";
     const tags = (j.tags || []).slice(0, 8).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
     const role = (j.roleFamily || []).join(" · ");
@@ -248,7 +249,7 @@
         </div>
       </div>
 
-      <div class="badges">${matchesWatch(j) ? `<span class="badge watch">⭐ watch</span>` : ""}${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${stBadge}</div>
+      <div class="badges">${matchesWatch(j) ? `<span class="badge watch">⭐ watch</span>` : ""}${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${deadBadge}${stBadge}</div>
 
       <div class="meta-row">
         <span class="m">📍 ${esc(j.location)}</span>

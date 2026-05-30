@@ -45,6 +45,9 @@ VERSION, CHANGELOG.md
   roleFamily:[...], salary, salaryMin, salaryMax, posted, dateAdded, source,
   applyUrl, altUrl, tags:[...], description, fit }
 ```
+Optional health fields (set by the monthly routine's link-health step): `linkStatus`
+(`"ok"` | `"dead"`) and `linkChecked` (YYYY-MM-DD). A `"dead"` status renders a
+"⛔ link dead" badge on the card.
 roleFamily values (exact strings): `Product Owner / PM`, `Instructional Design / L&D`,
 `Technical Writing / Content`, `Scrum Master / Agile`, `Customer Education / Enablement`,
 `Business Analyst`, `Solutions / Implementation`, `LIMS / Scientific Informatics`.

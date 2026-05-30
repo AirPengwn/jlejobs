@@ -3,6 +3,12 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.4.1 — 2026-05-30
+- **Link-health, in the cloud routine.** The monthly routine now curls each posting's
+  apply link and sets `linkStatus:"dead"` on clear 404/410s (conservative — ignores
+  403/timeouts to avoid false alarms). Cards flagged dead show a new **"⛔ link dead"**
+  badge. (Done server-side because a static page can't check cross-origin links.)
+
 ## v1.4.0 — 2026-05-30
 - **Commute estimate** on CT cards (~miles + rough drive time from Guilford) + a new
   "Closest (CT)" sort.

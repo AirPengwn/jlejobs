@@ -3,6 +3,12 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.6.2 — 2026-05-30
+- **Re-centered the header** (owner preference): desktop is back to a centered stacked
+  masthead — avatar + title, subtitle, sync/update chips, and nav tabs all centered.
+  The mobile (≤640px) two-row layout + scrolling tab strip + safe-area insets are kept.
+  (SW cache → jle-cache-v1.6.2.)
+
 ## v1.6.1 — 2026-05-30
 - Added a **⟳ Update** button next to the sync chip — clears cached assets + the service
   worker and reloads fresh, so you can pull the latest version on an installed phone PWA

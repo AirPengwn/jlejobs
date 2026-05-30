@@ -17,10 +17,16 @@
 </head>
 <body>
   <header class="topbar">
-    <img class="avatar" src="assets/img/stickman.jpg" alt="" />
-    <div class="brand">
-      <h1 class="brand-title">Opportunity Dashboard <span class="brand-version" id="brandVersion"></span></h1>
-      <span class="brand-sub">John L. Evans · Connecticut &amp; Remote</span>
+    <div class="ident">
+      <img class="avatar" src="assets/img/stickman.jpg" alt="" />
+      <div class="brand">
+        <h1 class="brand-title">Opportunity Dashboard <span class="brand-version" id="brandVersion"></span></h1>
+        <span class="brand-sub">John L. Evans · Connecticut &amp; Remote</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="sync-btn" id="syncBtn" title="Sync starred/flagged across devices">☁ <span id="syncState">Sync off</span></button>
+      <button class="sync-btn" id="updateBtn" title="Force-fetch the latest version (clears cached files and reloads)">⟳ Update</button>
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="jobs">Opportunities</button>
@@ -30,10 +36,6 @@
       <button class="tab" data-view="bio">Biography</button>
       <button class="tab" data-view="resume">Résumé</button>
     </nav>
-    <div class="topbar-right">
-      <button class="sync-btn" id="syncBtn" title="Sync starred/flagged across devices">☁ <span id="syncState">Sync off</span></button>
-      <button class="sync-btn" id="updateBtn" title="Force-fetch the latest version (clears cached files and reloads)">⟳ Update</button>
-    </div>
   </header>
 
   <main>

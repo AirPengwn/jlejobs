@@ -12,19 +12,24 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">JLE</span>
-      <span class="brand-sub">Opportunity Dashboard</span>
+    <div class="masthead">
+      <div class="brand">
+        <img class="avatar" src="assets/img/stickman.jpg" alt="" />
+        <div class="brand-text">
+          <h1 class="brand-title">Opportunity Dashboard</h1>
+          <span class="brand-sub">John L. Evans · Connecticut &amp; Remote</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="sync-btn" id="syncBtn" title="Sync starred/flagged across devices">☁ <span id="syncState">Sync off</span></button>
+        <span class="updated" id="updatedStamp"></span>
+      </div>
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="jobs">Opportunities</button>
       <button class="tab" data-view="bio">Biography</button>
       <button class="tab" data-view="resume">Résumé</button>
     </nav>
-    <div class="topbar-right">
-      <button class="sync-btn" id="syncBtn" title="Sync starred/flagged across devices">☁ <span id="syncState">Sync off</span></button>
-      <span class="updated" id="updatedStamp"></span>
-    </div>
   </header>
 
   <main>
@@ -51,21 +56,28 @@
       </div>
 
       <div class="filters-bar">
-        <div class="filter-group" id="filter-roleFamily">
+        <div class="filter-group wide" id="filter-roleFamily">
           <div class="filter-label">Role family</div>
           <div class="filter-chips"></div>
         </div>
-        <div class="filter-group" id="filter-regions">
-          <div class="filter-label">Location</div>
-          <div class="filter-chips"></div>
-        </div>
-        <div class="filter-group" id="filter-workMode">
-          <div class="filter-label">Work mode</div>
-          <div class="filter-chips"></div>
-        </div>
-        <div class="filter-group" id="filter-kind">
-          <div class="filter-label">Card type</div>
-          <div class="filter-chips"></div>
+        <div class="filter-row">
+          <div class="filter-group" id="filter-regions">
+            <div class="filter-label">Location</div>
+            <div class="filter-chips"></div>
+          </div>
+          <div class="filter-group" id="filter-workMode">
+            <div class="filter-label">Work mode</div>
+            <div class="filter-chips"></div>
+          </div>
+          <div class="filter-group" id="filter-kind">
+            <div class="filter-label">Card type</div>
+            <div class="filter-chips"></div>
+          </div>
+          <div class="filter-group salary-group">
+            <div class="filter-label">Minimum salary <span id="salaryReadout" class="salary-readout">Any</span></div>
+            <input type="range" id="salaryRange" min="0" max="225000" step="5000" value="0" />
+            <div class="salary-scale"><span>$0</span><span>$225k+</span></div>
+          </div>
         </div>
       </div>
 

@@ -35,18 +35,24 @@ body {
 /* --------------------------------- Top bar ------------------------------- */
 .topbar {
   position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center; gap: 22px;
+  display: flex; flex-direction: column; gap: 12px;
   padding: 12px 22px;
-  background: rgba(13,17,23,.82);
+  background: rgba(13,17,23,.86);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: baseline; gap: 10px; }
-.brand-mark {
-  font-weight: 800; letter-spacing: .5px; font-size: 18px;
-  color: var(--accent);
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #fff; object-fit: contain; padding: 3px;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(79,209,197,.12);
+  flex-shrink: 0;
 }
-.brand-sub { color: var(--text-mute); font-size: 13px; }
+.brand-text { display: flex; flex-direction: column; gap: 1px; }
+.brand-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .2px; color: var(--text); }
+.brand-sub { color: var(--text-mute); font-size: 12.5px; }
 
 .tabs { display: flex; gap: 6px; }
 .tab {
@@ -107,16 +113,28 @@ main { max-width: 1240px; margin: 0 auto; padding: 22px; }
 
 /* ------------------------------- Filter bar ------------------------------ */
 .filters-bar {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 14px; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px;
+  border-radius: var(--radius); padding: 16px;
+}
+.filter-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 18px; padding-top: 14px; border-top: 1px solid var(--border);
 }
 .filter-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
   color: var(--text-mute); margin-bottom: 9px; font-weight: 700;
 }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+/* salary slider */
+.salary-group { min-width: 200px; }
+.salary-readout { color: var(--accent); font-weight: 800; letter-spacing: 0; text-transform: none; }
+#salaryRange {
+  width: 100%; accent-color: var(--accent); cursor: pointer;
+  margin: 2px 0 4px; height: 4px;
+}
+.salary-scale { display: flex; justify-content: space-between; color: var(--text-mute); font-size: 10.5px; }
 
 /* ------------------------------ Results meta ----------------------------- */
 .results-meta {

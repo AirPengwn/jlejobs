@@ -99,6 +99,7 @@
   const state = {
     q: "",
     sort: "new",
+    minSalary: 0,
     toggles: { new: false, starred: false, flagged: false },
     facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set() }
   };
@@ -160,6 +161,8 @@
     if (f.regions.size && !(j.regions || []).some((r) => f.regions.has(r))) return false;
     if (f.workMode.size && !f.workMode.has(j.workMode)) return false;
     if (f.kind.size && !f.kind.has(j.kind)) return false;
+    // salary: keep cards whose top of range meets the minimum
+    if (state.minSalary > 0 && (j.salaryMax || j.salaryMin || 0) < state.minSalary) return false;
     return true;
   }
 
@@ -433,6 +436,16 @@
       state.sort = e.target.value; render();
     });
 
+    // salary slider
+    const salaryRange = document.getElementById("salaryRange");
+    const salaryReadout = document.getElementById("salaryReadout");
+    const fmtSalary = (v) => v <= 0 ? "Any" : "$" + Math.round(v / 1000) + "k+";
+    salaryRange.addEventListener("input", (e) => {
+      state.minSalary = +e.target.value;
+      salaryReadout.textContent = fmtSalary(state.minSalary);
+      render();
+    });
+
     // quick toggles
     document.getElementById("quickFilters").addEventListener("click", (e) => {
       const btn = e.target.closest(".toggle");
@@ -454,6 +467,9 @@
     // clear filters
     document.getElementById("clearFiltersBtn").addEventListener("click", () => {
       state.q = ""; document.getElementById("searchBox").value = "";
+      state.minSalary = 0;
+      document.getElementById("salaryRange").value = 0;
+      document.getElementById("salaryReadout").textContent = "Any";
       Object.keys(state.toggles).forEach((k) => (state.toggles[k] = false));
       Object.values(state.facets).forEach((s) => s.clear());
       document.querySelectorAll(".chip.active").forEach((c) => c.classList.remove("active"));

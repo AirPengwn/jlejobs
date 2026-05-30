@@ -216,66 +216,112 @@
   }
 
   // ============================ card render =================================
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const shortDate = (iso) => /^\d{4}-\d{2}-\d{2}/.test(iso || "") ? MON[+iso.slice(5, 7) - 1] + " " + (+iso.slice(8, 10)) : "";
+  function compactSal(j) {
+    if (j.salaryMin && j.salaryMax) return "$" + Math.round(j.salaryMin / 1000) + "–" + Math.round(j.salaryMax / 1000) + "k";
+    if (j.salaryMin || j.salaryMax) return "$" + Math.round((j.salaryMax || j.salaryMin) / 1000) + "k";
+    return "";
+  }
+  const shortLoc = (loc) => (loc || "").replace(/\s*\([^)]*\)\s*/g, "").split(/[/,]/)[0].trim() || (loc || "");
+  const tierClass = (p) => p >= 85 ? "tier-hi" : p >= 70 ? "tier-mid" : "tier-lo";
+
   function cardHTML(j) {
-    const st = status[j.id] || "";
-    const note = notes[j.id] || "";
-    const newBadge = isNew(j) ? `<span class="badge new">NEW</span>` : "";
-    const liveBadge = j.live ? `<span class="badge live">● LIVE</span>` : "";
-    const statusBadge = j.status === "verified" ? `<span class="badge verified">✓ verified</span>`
-      : j.status === "snapshot" ? `<span class="badge snapshot">snapshot</span>` : "";
-    const expBadge = mayBeExpired(j) ? `<span class="badge expiring" title="Posting is older than 45 days — may be expired">⚠ may be expired</span>` : "";
-    const deadBadge = j.linkStatus === "dead" ? `<span class="badge dead" title="Apply link returned 404/gone on last automated check${j.linkChecked ? " (" + esc(j.linkChecked) + ")" : ""}">⛔ link dead</span>` : "";
-    const stBadge = st ? `<span class="badge st st-${st}">${esc(statusLabel(st))}</span>` : "";
-    const tags = (j.tags || []).slice(0, 8).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
-    const role = (j.roleFamily || []).join(" · ");
-    const salary = j.salary ? `<span class="m"><b>${esc(j.salary)}</b></span>` : `<span class="m">💰 see posting</span>`;
-    const posted = j.posted ? `<span class="m">📅 ${esc(j.posted)}</span>` : "";
-    const fit = `<span class="m fit" title="Heuristic match to your résumé">🎯 Fit ${fitPct(j)}</span>`;
+    const st = status[j.id] || "", note = notes[j.id] || "";
+    const pct = fitPct(j), tier = tierClass(pct);
+    const live = j.status === "live" || j.live;
+    let typeText = j.kind === "company" ? "Company · watch" : j.kind === "search" ? "Search" : "Posting";
+    if (j.kind === "posting") { if (j.status === "verified") typeText += " · verified"; else if (j.status === "snapshot") typeText += " · snapshot"; }
+    const kicker = `<div class="r-kicker">${isNew(j) ? `<span class="r-new">New</span>` : ""}${live ? `<span class="r-live">Live</span>` : ""}<span class="r-type">${esc(typeText)}</span></div>`;
+
+    const csal = compactSal(j);
+    const sub = `<div class="r-sub"><span class="co">${esc(j.company)}</span>${j.location ? ` · ${esc(shortLoc(j.location))}` : ""}${csal ? ` · <span class="sal">${esc(csal)}</span>` : ""}</div>`;
+
+    const whyTxt = (j.fit || "").replace(/^Fit:\s*/i, "");
+    const why = whyTxt ? `<p class="r-why"><span class="r-why-t">${esc(whyTxt).replace(/^(\S+\s+\S+)/, "<b>$1</b>")}</span></p>` : "";
+
+    const allTags = j.tags || [];
+    const visT = allTags.slice(0, 3).map((t) => `<span class="r-tag">${esc(t)}</span>`).join("");
+    const hidT = allTags.slice(3).map((t) => `<span class="r-tag hid">${esc(t)}</span>`).join("");
+    const moreN = allTags.length - 3;
+    const tagsRow = allTags.length ? `<div class="r-tags">${visT}${hidT}${moreN > 0 ? `<button class="r-tagmore" data-more="${moreN}" type="button">+${moreN}</button>` : ""}</div>` : "";
+
+    const dead = j.linkStatus === "dead", exp = mayBeExpired(j);
+    const alert = dead ? `<div class="r-alert">⛔ Apply link returned 404 — try the alt link</div>`
+      : exp ? `<div class="r-alert">⚠ Snapshot — verify it's still live</div>` : "";
+
+    const footDate = shortDate(j.posted) || (live ? "Live feed" : j.kind === "company" ? "Watch" : "");
+    const footMeta = `<span class="m">🧭 ${esc(j.workMode || "")}</span>${footDate ? `<span class="m">${esc(footDate)}</span>` : ""}`;
+
+    // drawer — the full record, nothing lost
     const ci = commuteInfo(j);
-    const commute = ci && ci.mi > 0 ? `<span class="m" title="Straight-line distance + rough drive estimate from Guilford">🚗 ~${ci.mi} mi · ~${ci.min} min</span>` : (ci ? `<span class="m">🚗 Guilford (home)</span>` : "");
-    const primaryLabel = j.live ? "View posting" : j.kind === "search" ? "Open live search" : j.kind === "company" ? "View careers" : "View posting";
+    const commuteStr = ci ? (ci.mi > 0 ? `🚗 ~${ci.mi} mi · ~${ci.min} min` : "🚗 Guilford (home)") : "🚗 n/a (remote)";
+    const linkStr = j.linkStatus ? `${j.linkStatus === "dead" ? "⛔ dead" : "✓ " + esc(j.linkStatus)}${j.linkChecked ? " · " + esc(j.linkChecked) : ""}` : "—";
+    const role = (j.roleFamily || []).join(" · ");
     const statusOpts = `<option value="">— set status —</option>` + STATUS.map((s) => `<option value="${s.key}"${s.key === st ? " selected" : ""}>${esc(s.label)}</option>`).join("");
+    const primaryLabel = j.kind === "search" ? "Open live search" : j.kind === "company" ? "View careers" : "View posting";
+    const foot = dead
+      ? `<a class="btn ghost dead" title="Primary link returned 404">⛔ Primary dead</a><a class="btn primary" href="${esc(j.altUrl || j.applyUrl)}" target="_blank" rel="noopener">Try alt link ↗</a>`
+      : `<a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${primaryLabel} ↗</a>${j.altUrl ? `<a class="btn ghost" href="${esc(j.altUrl)}" target="_blank" rel="noopener">Alt link</a>` : ""}`;
+    const allSkills = allTags.map((t) => `<span class="r-tag">${esc(t)}</span>`).join("");
+    const drawer = `
+      <div class="r-drawer">
+        ${j.description ? `<div><div class="rd-h">Full description</div><p class="rd-p">${esc(j.description)}</p></div>` : ""}
+        ${j.fit ? `<div><div class="rd-h">Why it fits</div><p class="rd-why">${esc(j.fit)}</p></div>` : ""}
+        <div class="rd-grid">
+          <div><span class="rd-k">Location</span><span class="rd-v">📍 ${esc(j.location || "—")}</span></div>
+          <div><span class="rd-k">Work mode</span><span class="rd-v">🧭 ${esc(j.workMode || "—")}</span></div>
+          <div><span class="rd-k">Commute</span><span class="rd-v">${commuteStr}</span></div>
+          <div><span class="rd-k">Salary</span><span class="rd-v">💰 ${esc(j.salary || "see posting")}</span></div>
+          <div><span class="rd-k">Posted</span><span class="rd-v">📅 ${esc(j.posted || (live ? "Live — never stale" : "—"))}</span></div>
+          <div><span class="rd-k">Role family</span><span class="rd-v">🗂 ${esc(role || "—")}</span></div>
+          <div><span class="rd-k">Source</span><span class="rd-v">${esc(j.source || "—")}</span></div>
+          <div><span class="rd-k">Link check</span><span class="rd-v">${linkStr}</span></div>
+        </div>
+        ${allSkills ? `<div><div class="rd-h">All skills</div><div class="r-tags">${allSkills}</div></div>` : ""}
+        <div class="rd-controls">
+          <select class="status-select" data-act="status">${statusOpts}</select>
+          <button class="rd-mini" data-act="outreach" type="button">✍ Draft outreach</button>
+        </div>
+        <div><div class="rd-h">Private note</div><textarea class="rd-note" placeholder="Synced across your devices…">${esc(note)}</textarea></div>
+        <div class="rd-foot">${foot}</div>
+      </div>`;
+
+    const cls = ["card", tier];
+    if (starred.has(j.id)) cls.push("starred");
+    if (hidden.has(j.id)) cls.push("is-hidden");
+    if (matchesWatch(j)) cls.push("is-watched");
 
     return `
-    <article class="card${isNew(j) ? " is-new" : ""}${st ? " has-status st-border-" + st : ""}${hidden.has(j.id) ? " is-hidden" : ""}${matchesWatch(j) ? " is-watched" : ""}" data-id="${esc(j.id)}">
-      <div class="card-head">
-        <div>
+    <article class="${cls.join(" ")}" data-id="${esc(j.id)}">
+      <div class="r-top">
+        <div class="r-headwrap">
+          ${kicker}
           <h3 class="card-title">${esc(j.title)}</h3>
-          <div class="card-company">${esc(j.company)}</div>
+          ${sub}
         </div>
-        <div class="card-actions">
-          <button class="icon-btn star${starred.has(j.id) ? " on" : ""}" data-act="star" title="Star (like)">★</button>
-          <button class="icon-btn flag${flagged.has(j.id) ? " on" : ""}" data-act="flag" title="Flag">⚑</button>
-          <button class="icon-btn note${note ? " on" : ""}" data-act="note" title="Note">📝</button>
-          <button class="icon-btn hide${hidden.has(j.id) ? " on" : ""}" data-act="hide" title="${hidden.has(j.id) ? "Unhide" : "Hide"}">${hidden.has(j.id) ? "↩" : "🚫"}</button>
+        <div class="r-fit">
+          <div class="r-fit-num">${pct}</div>
+          <span class="r-fit-label">Fit</span>
+          <div class="r-fit-bar"><i style="width:${pct}%"></i></div>
         </div>
       </div>
-
-      <div class="badges">${matchesWatch(j) ? `<span class="badge watch">⭐ watch</span>` : ""}${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${deadBadge}${stBadge}</div>
-
-      <div class="meta-row">
-        <span class="m">📍 ${esc(j.location)}</span>
-        <span class="m">🧭 ${esc(j.workMode)}</span>
-        ${commute}${salary}${posted}${fit}
+      ${why}
+      ${tagsRow}
+      ${alert}
+      <div class="r-foot">
+        <div class="r-foot-meta">${footMeta}</div>
+        <div class="r-foot-right">
+          <div class="r-actions">
+            <button class="r-act star${starred.has(j.id) ? " on" : ""}" data-act="star" title="Star">★</button>
+            <button class="r-act flag${flagged.has(j.id) ? " on" : ""}" data-act="flag" title="Flag">⚑</button>
+            <button class="r-act hide${hidden.has(j.id) ? " on" : ""}" data-act="hide" title="${hidden.has(j.id) ? "Unhide" : "Hide"}">${hidden.has(j.id) ? "↩" : "🚫"}</button>
+            <a class="r-act open" href="${esc(j.applyUrl)}" target="_blank" rel="noopener" title="Open">↗</a>
+          </div>
+          <button class="r-details" type="button">Details<span class="chev">⌄</span></button>
+        </div>
       </div>
-      ${role ? `<div class="meta-row"><span class="m">🗂 ${esc(role)}</span></div>` : ""}
-
-      ${j.description ? `<p class="card-desc">${esc(j.description)}</p>` : ""}
-      ${j.fit ? `<div class="card-fit"><b>Fit:</b> ${esc(j.fit)}</div>` : ""}
-      ${tags ? `<div class="tag-row">${tags}</div>` : ""}
-
-      <div class="card-controls">
-        <select class="status-select" data-act="status">${statusOpts}</select>
-        <button class="mini-btn" data-act="outreach">✍ Draft outreach</button>
-      </div>
-      <div class="note-box" data-note hidden>
-        <textarea placeholder="Private note (synced across your devices)…">${esc(note)}</textarea>
-      </div>
-
-      <div class="card-foot">
-        <a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${primaryLabel} ↗</a>
-        ${j.altUrl ? `<a class="btn ghost" href="${esc(j.altUrl)}" target="_blank" rel="noopener">Alt link</a>` : ""}
-      </div>
+      ${drawer}
     </article>`;
   }
 
@@ -295,11 +341,12 @@
   }
 
   function wireCards(cards) {
+    // title → existing full-screen detail modal
     cards.querySelectorAll(".card-title").forEach((t) => {
-      t.style.cursor = "pointer";
-      t.addEventListener("click", () => openDetail(t.closest(".card").dataset.id));
+      t.addEventListener("click", (e) => { e.stopPropagation(); openDetail(t.closest(".card").dataset.id); });
     });
-    cards.querySelectorAll(".icon-btn").forEach((btn) => {
+    // hover actions: star / flag / hide (open-link is a plain <a>, no data-act)
+    cards.querySelectorAll(".r-act[data-act]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".card"), id = card.dataset.id, act = btn.dataset.act;
@@ -307,24 +354,42 @@
           const set = act === "star" ? starred : flagged;
           set.has(id) ? set.delete(id) : set.add(id);
           saveSet(act === "star" ? LS.starred : LS.flagged, set);
-          btn.classList.toggle("on"); scheduleSync();
+          btn.classList.toggle("on");
+          if (act === "star") card.classList.toggle("starred", starred.has(id));
+          scheduleSync();
         } else if (act === "hide") {
           hidden.has(id) ? hidden.delete(id) : hidden.add(id);
           saveSet(LS.hidden, hidden); scheduleSync(); render();
-        } else if (act === "note") {
-          const box = card.querySelector("[data-note]"); box.hidden = !box.hidden;
-          if (!box.hidden) box.querySelector("textarea").focus();
         }
       });
     });
+    // expand-in-place: Details drawer + +N tags (per the handoff)
+    cards.querySelectorAll(".r-details").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = btn.closest(".card").classList.toggle("open");
+        btn.childNodes[0].nodeValue = open ? "Hide " : "Details";
+      });
+    });
+    cards.querySelectorAll(".r-tagmore").forEach((btn) => {
+      const n = btn.getAttribute("data-more");
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = btn.closest(".card").classList.toggle("tags-open");
+        btn.textContent = open ? "− less" : "+" + n;
+      });
+    });
+    // status select (in drawer) — existing handler
     cards.querySelectorAll(".status-select").forEach((sel) => {
-      sel.addEventListener("change", () => {
+      sel.addEventListener("change", (e) => {
+        e.stopPropagation();
         const id = sel.closest(".card").dataset.id;
         if (sel.value) status[id] = sel.value; else delete status[id];
         saveMap(LS.status, status); scheduleSync(); buildStatusFilter(); render();
       });
     });
-    cards.querySelectorAll("[data-note] textarea").forEach((ta) => {
+    // note textarea (in drawer) — debounced persist + sync
+    cards.querySelectorAll(".rd-note").forEach((ta) => {
       let t = null;
       ta.addEventListener("input", () => {
         const id = ta.closest(".card").dataset.id;
@@ -332,13 +397,11 @@
         t = setTimeout(() => {
           if (ta.value.trim()) notes[id] = ta.value; else delete notes[id];
           saveMap(LS.notes, notes); scheduleSync();
-          const btn = ta.closest(".card").querySelector(".icon-btn.note");
-          btn.classList.toggle("on", !!ta.value.trim());
         }, 700);
       });
     });
     cards.querySelectorAll('[data-act="outreach"]').forEach((b) => {
-      b.addEventListener("click", () => openOutreach(b.closest(".card").dataset.id));
+      b.addEventListener("click", (e) => { e.stopPropagation(); openOutreach(b.closest(".card").dataset.id); });
     });
   }
 

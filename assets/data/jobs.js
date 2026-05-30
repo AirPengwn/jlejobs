@@ -35,7 +35,8 @@ window.JOBS = [
     altUrl: "https://cresta.com/careers/",
     tags: ["Articulate Rise", "Articulate Storyline", "eLearning", "Instructor-led", "SaaS", "Onboarding", "Video"],
     description: "Design and lead instructor-led training for customers, build eLearning in Articulate Rise/Storyline, produce instructional videos and docs, and support new-hire onboarding for an AI contact-center SaaS. 3–5 yrs training/education; SaaS proficiency; up to ~50% travel.",
-    fit: "Direct match to your Core Informatics / Thermo Fisher customer-education work — instructor-led + eLearning authoring + SaaS. Verified active (posted May 8, 2026)."
+    fit: "Direct match to your Core Informatics / Thermo Fisher customer-education work — instructor-led + eLearning authoring + SaaS. Verified active (posted May 8, 2026).",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "socure-sales-enablement-training-mgr",
@@ -50,7 +51,8 @@ window.JOBS = [
     altUrl: "https://www.socure.com/company/careers",
     tags: ["LearnUpon", "LMS", "Enablement", "AI role-play", "Onboarding", "Program analytics"],
     description: "Build learning courses by persona, create AI-powered role-play scenarios, run new-hire check-ins, manage LMS data, and report program effectiveness. 4–6 yrs enablement; LMS (LearnUpon, Mindtickle, Seismic).",
-    fit: "Lists LearnUpon — which is on your resume. Blends your enablement, LMS administration, and program-ownership experience. Verified active."
+    fit: "Lists LearnUpon — which is on your resume. Blends your enablement, LMS administration, and program-ownership experience. Verified active.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "worldpay-rte-agile-coach",
@@ -65,7 +67,8 @@ window.JOBS = [
     altUrl: "https://careers.worldpay.com/",
     tags: ["SAFe", "RTE", "Agile coach", "ART", "Fintech"],
     description: "Servant-leader RTE/Agile Coach aligning multiple Agile teams across an ART, managing dependencies and removing blockers in a SAFe environment.",
-    fit: "Natural step up from your Product Owner + scrum-master experience into SAFe program leadership. Top of your salary range. Snapshot — verify live."
+    fit: "Natural step up from your Product Owner + scrum-master experience into SAFe program leadership. Top of your salary range. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "icf-rte-remote",
@@ -80,7 +83,8 @@ window.JOBS = [
     altUrl: "https://www.icf.com/careers",
     tags: ["SAFe", "RTE", "Consulting", "ART", "Government/commercial"],
     description: "Coordinate PI planning, system demos, and cross-team execution as an RTE on a Scaled Agile Release Train.",
-    fit: "You already coordinate PI planning, I&A, and system demos as a PO — this is the RTE version of that work. Snapshot — verify live."
+    fit: "You already coordinate PI planning, I&A, and system demos as a PO — this is the RTE version of that work. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "freedomcare-lxd",
@@ -95,7 +99,8 @@ window.JOBS = [
     altUrl: "https://www.freedomcareny.com/careers/",
     tags: ["eLearning", "Multi-modal", "AI tools", "Stakeholder collaboration"],
     description: "Collaborate with stakeholders to design training across modalities, leveraging AI and data to optimize learning outcomes.",
-    fit: "Instructional design core. Snapshot — confirm it's still open via the link."
+    fit: "Instructional design core. Snapshot — confirm it's still open via the link.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "elb-learning-id-lxd",
@@ -110,7 +115,8 @@ window.JOBS = [
     altUrl: "https://www.elblearning.com/about-us/careers",
     tags: ["Contract", "5+ yrs ID", "Storyline", "Rise"],
     description: "Fully-remote contract ID/LXD role; requires 5+ years instructional design / learning experience design.",
-    fit: "Contract option — good for a low-commitment side engagement while still employed. Snapshot — verify live."
+    fit: "Contract option — good for a low-commitment side engagement while still employed. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "dbt-labs-lead-curriculum-developer",
@@ -125,7 +131,8 @@ window.JOBS = [
     altUrl: "https://www.getdbt.com/careers/open-roles",
     tags: ["Curriculum", "Customer education", "Data/technical audience", "Leadership"],
     description: "Own development and delivery of customer curriculum for data practitioners at a developer-tools company.",
-    fit: "Customer curriculum leadership for a technical audience — mirrors your Training Manager / Customer Education Manager roles. Snapshot — verify live."
+    fit: "Customer curriculum leadership for a technical audience — mirrors your Training Manager / Customer Education Manager roles. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "pathstream-lxd",
@@ -140,7 +147,8 @@ window.JOBS = [
     altUrl: "https://www.pathstream.com/careers/",
     tags: ["Learner-centered", "Course lifecycle", "Learning science", "AI tools"],
     description: "Design interactive, learner-centered online curricula and manage the full course lifecycle from concept to delivery.",
-    fit: "Higher salary band ID role. Snapshot — verify live."
+    fit: "Higher salary band ID role. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "randstad-elearning-id-hartford",
@@ -155,7 +163,8 @@ window.JOBS = [
     altUrl: "https://www.randstadusa.com/jobs/search/instructional-designer/connecticut/",
     tags: ["ADDIE", "SAM", "Agile learning", "WCAG", "Workday Learning", "100% remote"],
     description: "100% remote (CT-based client). 3+ yrs ID in large corporate/enterprise; ADDIE/SAM/Agile design, UX/accessibility (WCAG), posts in Workday Learning.",
-    fit: "CT-based and fully remote — corporate ID with the models you know. Staffing role (contract-to-hire). Snapshot — verify live."
+    fit: "CT-based and fully remote — corporate ID with the models you know. Staffing role (contract-to-hire). Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "ectw-instructional-designer",
@@ -170,7 +179,8 @@ window.JOBS = [
     altUrl: "https://www.edtech.com/jobs/instructional-design-jobs",
     tags: ["Instructional design", "EdTech"],
     description: "Instructional designer role at a mission-driven education organization (non-K12).",
-    fit: "EdTech ID outside public schools. Snapshot — verify live."
+    fit: "EdTech ID outside public schools. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "leidos-agile-product-owner",
@@ -185,7 +195,8 @@ window.JOBS = [
     altUrl: "https://careers.leidos.com/search/cfm23/6314/jobs/in",
     tags: ["SAFe", "Agile", "Digital modernization", "Defense IT", "Backlog", "Remote"],
     description: "Agile Product Owner supporting digital modernization in the federal technology sector. 3+ yrs PO in an agile setting; fully remote with ~10% travel.",
-    fit: "Large defense-IT company where your SAFe PO/PM cert, backlog ownership, and Scrum Master experience transfer directly — and federal digital modernization programs pay competitively. Snapshot — verify live."
+    fit: "Large defense-IT company where your SAFe PO/PM cert, backlog ownership, and Scrum Master experience transfer directly — and federal digital modernization programs pay competitively. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "danaher-beckman-lxd-developer",
@@ -200,7 +211,8 @@ window.JOBS = [
     altUrl: "https://remotive.com/remote/jobs/education/learning-experience-designer-developer-4305650",
     tags: ["Articulate Storyline", "Adobe Creative Cloud", "Life sciences", "Diagnostics", "LXD", "Video", "Customer training"],
     description: "Design and develop immersive learning programs for Beckman Coulter service associates and customers using Articulate Storyline, Adobe Creative Cloud, and video tools. Reports to VP of Global Product Technical Support. B.S. + 9 yrs or M.S. + 7 yrs required.",
-    fit: "Life-sciences diagnostics division of Danaher — mirrors your Core Informatics / Thermo Fisher customer-education and eLearning portal work almost exactly, with a competitive salary band. Snapshot — verify live."
+    fit: "Life-sciences diagnostics division of Danaher — mirrors your Core Informatics / Thermo Fisher customer-education and eLearning portal work almost exactly, with a competitive salary band. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "veeva-lims-implementation-consultant",
@@ -215,7 +227,8 @@ window.JOBS = [
     altUrl: "https://careers.veeva.com/job-search-results/",
     tags: ["LIMS", "LabWare", "LabVantage", "StarLIMS", "Life sciences", "Implementation", "Professional services", "Customer-facing", "Travel"],
     description: "Customer-facing LIMS implementation consultant at a leading life-sciences cloud vendor — requirements gathering, configuration (LabWare, LabVantage, StarLIMS, BIOVIA, Empower), validation testing, and post-go-live support. Remote US; proximity to airport for client travel.",
-    fit: "Pure-play life-sciences SaaS where your Platform for Science / LIMS domain knowledge plus customer-education and documentation expertise map directly to what this role demands. Snapshot — verify live."
+    fit: "Pure-play life-sciences SaaS where your Platform for Science / LIMS domain knowledge plus customer-education and documentation expertise map directly to what this role demands. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "veeva-technical-writer-vault",
@@ -230,7 +243,8 @@ window.JOBS = [
     altUrl: "https://careers.veeva.com/job-search-results/",
     tags: ["Technical writing", "Vault", "Life sciences SaaS", "Documentation", "API docs", "Release notes"],
     description: "Author product documentation for Veeva Vault — the industry-standard document-management and content platform used globally by life sciences companies. Remote US.",
-    fit: "Technical communication for a life-sciences SaaS platform in the same ecosystem as Thermo Fisher's Platform for Science — your content ops + technical writing background serving a LIMS/informatics audience. Snapshot — verify live."
+    fit: "Technical communication for a life-sciences SaaS platform in the same ecosystem as Thermo Fisher's Platform for Science — your content ops + technical writing background serving a LIMS/informatics audience. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "sorcero-csm-life-sciences",
@@ -245,7 +259,8 @@ window.JOBS = [
     altUrl: "https://remotive.com/remote/jobs/customer-service/customer-success-manager-4495008",
     tags: ["AI", "Medical AI", "Life sciences", "Customer success", "SaaS adoption", "Trusted advisor"],
     description: "Build trusted-advisor relationships with life sciences customers driving adoption of Sorcero's medical AI platform; own onboarding, success planning, and renewal. Certified B Corp; 3 weeks PTO + December recess.",
-    fit: "Customer success at an AI life sciences startup — your customer-education, scientific-software, and product-knowledge background from Core Informatics / Thermo Fisher applies directly. Snapshot — verify live."
+    fit: "Customer success at an AI life sciences startup — your customer-education, scientific-software, and product-knowledge background from Core Informatics / Thermo Fisher applies directly. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "salesforce-csm-life-sciences",
@@ -260,7 +275,8 @@ window.JOBS = [
     altUrl: "https://careers.salesforce.com/en/jobs/",
     tags: ["Enterprise SaaS", "Life sciences vertical", "Customer success", "CRM", "Trusted advisor", "Portfolio management"],
     description: "Customer Success Manager at Salesforce owning a life sciences account portfolio — drive adoption, serve as domain expert, and support renewal and expansion. Fully remote (select US cities; CA/NY/Boston/Chicago/Seattle/DC band pays $147k–$248k).",
-    fit: "High-salary enterprise SaaS CSM with a life-sciences vertical — combines your customer-facing background, life-sciences domain knowledge, and software platform expertise. Snapshot — verify live."
+    fit: "High-salary enterprise SaaS CSM with a life-sciences vertical — combines your customer-facing background, life-sciences domain knowledge, and software platform expertise. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
   {
     id: "experian-health-po-saas",
@@ -275,7 +291,56 @@ window.JOBS = [
     altUrl: "https://jobs.experian.com/jobs",
     tags: ["Healthcare SaaS", "Revenue cycle", "HIPAA", "Agile", "Backlog", "JIRA", "Confluence"],
     description: "Grow Experian Health's revenue-cycle payment products as a Product Owner — own backlog, collaborate cross-functionally, apply HIPAA/PHI compliance knowledge. Remote US; JIRA/Confluence and Agile/Scrum experience required.",
-    fit: "Healthcare SaaS PO role where your SAFe certification, SDLC ownership, Jira/Confluence fluency, and compliance-aware delivery from Thermo Fisher translate directly. Snapshot — verify live."
+    fit: "Healthcare SaaS PO role where your SAFe certification, SDLC ownership, Jira/Confluence fluency, and compliance-aware delivery from Thermo Fisher translate directly. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
+  },
+  {
+    id: "eclinical-solutions-technical-writer",
+    kind: "posting", status: "snapshot",
+    title: "Technical Writer", company: "eClinical Solutions",
+    location: "Remote (US)", workMode: "Remote", regions: ["Remote"],
+    roleFamily: ["Technical Writing / Content", "LIMS / Scientific Informatics"],
+    salary: "$90k–$100k", salaryMin: 90000, salaryMax: 100000,
+    posted: null, dateAdded: "2026-05-30",
+    source: "Greenhouse / Himalayas",
+    applyUrl: "https://job-boards.greenhouse.io/eclinicalsolutions/jobs/5084192007",
+    altUrl: "https://himalayas.app/companies/eclinical-solutions/jobs/technical-writer",
+    tags: ["Life sciences", "Clinical SaaS", "elluminate", "Help Center", "User guides", "Release notes", "Top Workplaces USA"],
+    description: "Develop task-based documentation for the elluminate® Clinical Data Cloud — help articles, user guides, quick-reference materials, workflow docs, and video scripts — collaborating with PMs, engineers, and SMEs throughout the product lifecycle. Test documented workflows in the product. Full-time remote, 2025 Top Workplaces USA winner.",
+    fit: "eClinical Solutions' elluminate platform is a clinical data cloud analogous to Thermo Fisher's Platform for Science — your life-sciences SaaS documentation, content lifecycle, and SME-collaboration skills map directly onto this role at a verified remote-first company. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
+  },
+  {
+    id: "platform-science-product-owner",
+    kind: "posting", status: "snapshot",
+    title: "Product Owner", company: "Platform Science",
+    location: "Remote (US)", workMode: "Remote", regions: ["Remote"],
+    roleFamily: ["Product Owner / PM"],
+    salary: "$109k–$143.5k + bonus + equity", salaryMin: 109000, salaryMax: 143500,
+    posted: "2026-05-09", dateAdded: "2026-05-30",
+    source: "Greenhouse / Platform Science",
+    applyUrl: "https://job-boards.greenhouse.io/platformscience/jobs/7726995003",
+    altUrl: "https://www.platformscience.com/careers/product-owner",
+    tags: ["Fleet technology", "Telematics", "SaaS", "Jira", "Confluence", "Agile", "Backlog", "Mobile platform"],
+    description: "Embedded PO turning product strategy into shipped software for a fleet-management and connected-vehicle SaaS platform. Own sprint backlog, write user stories and acceptance criteria, partner with engineering and design. 3+ yrs PO/PM in SaaS; Jira/Confluence; Agile. Remote-US with ~5% travel to San Diego HQ.",
+    fit: "Core SaaS Product Owner role where your SAFe PO cert, backlog ownership, user-story writing, and Agile delivery experience from Thermo Fisher apply directly — competitive salary band, remote-first. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
+  },
+  {
+    id: "grafana-labs-senior-technical-writer",
+    kind: "posting", status: "snapshot",
+    title: "Senior Technical Writer", company: "Grafana Labs",
+    location: "Remote (US)", workMode: "Remote", regions: ["Remote"],
+    roleFamily: ["Technical Writing / Content"],
+    salary: "$123,933–$148,719", salaryMin: 123933, salaryMax: 148719,
+    posted: null, dateAdded: "2026-05-30",
+    source: "Greenhouse / Grafana Labs",
+    applyUrl: "https://job-boards.greenhouse.io/grafanalabs/jobs/5456423004",
+    altUrl: "https://grafana.com/about/careers/open-positions/",
+    tags: ["Observability", "Open source", "Developer docs", "Git/GitHub", "Cloud SaaS", "Remote-first", "$1,500 L&D stipend"],
+    description: "Produce high-quality developer documentation and guides for Grafana Labs' observability platform, collaborating with engineers, developer advocates, support, and PMs. Remote-US; Git/GitHub workflow; enterprise/cloud documentation experience preferred; open-source community familiarity a plus.",
+    fit: "Top-of-band SaaS technical writing role ($148k cap) — your content operations and technical documentation background transfers well; observability is not your primary domain but developer-audience writing skills and cloud-SaaS familiarity are strong differentiators. Snapshot — verify live.",
+    linkStatus: "ok", linkChecked: "2026-05-30"
   },
 
   /* ----------------------------- SAVED SEARCHES -------------------------- */

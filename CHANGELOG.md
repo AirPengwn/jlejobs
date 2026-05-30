@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.4.2 — 2026-05-30
+- **3 new specific posting cards (monthly refresh):**
+  - eClinical Solutions Technical Writer (Technical Writing / LIMS, remote, $90k–$100k) — clinical data cloud documentation role mirroring Thermo Fisher content work.
+  - Platform Science Product Owner (Product Owner / PM, remote, $109k–$143.5k + bonus/equity) — fleet SaaS PO role, posted May 9 2026.
+  - Grafana Labs Senior Technical Writer (Technical Writing, remote, $123k–$148k) — high-band developer documentation role.
+- **Link-health pass:** checked all 17 existing `kind:"posting"` apply-links; all returned 403 (treated as `"ok"` per conservative policy). Added `linkStatus:"ok"` and `linkChecked:"2026-05-30"` to every posting card.
+
 ## v1.4.1 — 2026-05-30
 - **Link-health, in the cloud routine.** The monthly routine now curls each posting's
   apply link and sets `linkStatus:"dead"` on clear 404/410s (conservative — ignores

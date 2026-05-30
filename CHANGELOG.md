@@ -3,6 +3,11 @@
 Versioning starts here. Each update ships on its own `vX.Y.Z` branch and is then
 merged to `main` (which is what GitHub Pages serves).
 
+## v1.2.2 — 2026-05-30
+- Added `CLAUDE.md` — a project guide so any Claude session (any machine) is
+  instantly oriented: architecture, card shape, features, the release workflow,
+  résumé regeneration, and a reminder to `git pull` first.
+
 ## v1.2.1 — 2026-05-30
 - Added a **"🔄 Refresh live"** button (results bar) that re-pulls all live
   company boards on demand — fully client-side, no GitHub/server needed. Replaces

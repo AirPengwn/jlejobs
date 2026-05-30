@@ -3,6 +3,12 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.5.1 — 2026-05-30
+- **Header polish:** removed a stray `margin-left:auto` that was pushing the sync
+  status to the right; the ☁ sync indicator now sits centered under the title.
+  Removed the duplicate "Data refreshed" date from the header (it stays in the footer).
+  Softened the "new since last visit" digest banner (slimmer, less saturated).
+
 ## v1.5.0 — 2026-05-30
 - **Centered header & nav** — masthead (avatar + title + sync) and tab bar are now
   centered on the page instead of left-aligned.

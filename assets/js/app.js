@@ -957,7 +957,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     });
 
     const stamp = "Data refreshed " + (window.JOBS_GENERATED || "—");
-    document.getElementById("updatedStamp").textContent = stamp;
+    const us = document.getElementById("updatedStamp"); if (us) us.textContent = stamp;
     document.getElementById("footStamp").textContent = stamp;
     const bv = document.getElementById("brandVersion");
     if (bv && window.APP_VERSION) bv.textContent = "v" + window.APP_VERSION;

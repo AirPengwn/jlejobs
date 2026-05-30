@@ -3,6 +3,10 @@
 Versioning starts here. Each update ships on its own `vX.Y.Z` branch and is then
 merged to `main` (which is what GitHub Pages serves).
 
+## v1.1.1 — 2026-05-30
+- Show the app version (from `assets/data/version.js`) as a small pill next to
+  the "Opportunity Dashboard" title. The monthly refresh routine bumps it too.
+
 ## v1.1.0 — 2026-05-30
 - **Tracker:** per-card status pipeline (Watching → Interested → Applied →
   Interviewing → Passed/Closed), private notes, and hide/dismiss — all synced

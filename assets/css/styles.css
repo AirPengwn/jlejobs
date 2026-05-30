@@ -52,6 +52,11 @@ body {
 }
 .brand-text { display: flex; flex-direction: column; gap: 1px; }
 .brand-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .2px; color: var(--text); }
+.brand-version {
+  font-size: 11px; font-weight: 700; color: var(--text-mute);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1px 6px; vertical-align: middle; letter-spacing: .3px;
+}
 .brand-sub { color: var(--text-mute); font-size: 12.5px; }
 
 .tabs { display: flex; gap: 6px; }

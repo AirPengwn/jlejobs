@@ -24,19 +24,29 @@
   // the user to see the initial batch as "new", so leave `seen` empty on first run.
 
   // ===================== JSONBin cross-device sync ==========================
-  // Config lives ONLY in localStorage (never committed to the public site).
-  const SYNC_KEY = "jle_jsonbin";
+  // A built-in default config (assets/data/sync-config.js) enables sync on every
+  // device automatically. A per-device override or "turn off" via the Sync panel
+  // is stored in localStorage and takes priority over the default.
+  const SYNC_KEY = "jle_jsonbin";   // per-device override config
+  const SYNC_OFF = "jle_sync_off";  // set when user explicitly turns sync off
+  function resolveCfg() {
+    const local = JSON.parse(localStorage.getItem(SYNC_KEY) || "null");
+    if (local) return local;
+    if (localStorage.getItem(SYNC_OFF)) return null;
+    return window.JLE_SYNC_DEFAULT || null;
+  }
   const sync = {
-    cfg: JSON.parse(localStorage.getItem(SYNC_KEY) || "null"), // {binId, key, keyType}
+    cfg: resolveCfg(), // {binId, key, keyType}
     timer: null, pushing: false,
     on() { return !!(this.cfg && this.cfg.binId && this.cfg.key); },
+    usingDefault() { return !localStorage.getItem(SYNC_KEY) && !!window.JLE_SYNC_DEFAULT && !localStorage.getItem(SYNC_OFF); },
     headers() {
       const h = { "Content-Type": "application/json" };
       h[this.cfg.keyType === "master" ? "X-Master-Key" : "X-Access-Key"] = this.cfg.key;
       return h;
     },
-    save(cfg) { this.cfg = cfg; localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); },
-    forget() { this.cfg = null; localStorage.removeItem(SYNC_KEY); }
+    save(cfg) { this.cfg = cfg; localStorage.removeItem(SYNC_OFF); localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); },
+    forget() { this.cfg = null; localStorage.removeItem(SYNC_KEY); localStorage.setItem(SYNC_OFF, "1"); }
   };
 
   function setSyncState(text) {
@@ -350,7 +360,13 @@
         document.getElementById("binKey").value = sync.cfg.key || "";
         document.getElementById("binKeyType").value = sync.cfg.keyType || "access";
       }
-      syncStatus(sync.on() ? "Sync is ON for this browser." : "", "");
+      syncStatus(
+        sync.on()
+          ? (sync.usingDefault()
+              ? "Sync is ON via the built-in default — works on all devices automatically."
+              : "Sync is ON (per-device override).")
+          : "Sync is off on this device.",
+        sync.on() ? "ok" : "");
       modal.hidden = false;
     };
     const close = () => { modal.hidden = true; };

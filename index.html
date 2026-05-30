@@ -9,6 +9,8 @@
   <title>JLE · Opportunity Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 <body>
   <header class="topbar">
@@ -27,6 +29,7 @@
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="jobs">Opportunities</button>
+      <button class="tab" data-view="map">Map</button>
       <button class="tab" data-view="bio">Biography</button>
       <button class="tab" data-view="resume">Résumé</button>
     </nav>
@@ -43,15 +46,18 @@
           <button class="chip toggle" data-toggle="new">🟢 New</button>
           <button class="chip toggle" data-toggle="starred">★ Starred</button>
           <button class="chip toggle" data-toggle="flagged">⚑ Flagged</button>
+          <button class="chip toggle" data-toggle="hidden">🚫 Hidden</button>
         </div>
         <div class="sort-wrap">
           <label for="sortBy">Sort</label>
           <select id="sortBy">
             <option value="new">Newest added</option>
+            <option value="fit">Best fit</option>
             <option value="salary">Salary (high→low)</option>
             <option value="company">Company A→Z</option>
             <option value="title">Title A→Z</option>
           </select>
+          <button class="sort-wrap-btn" id="densityBtn" title="Toggle card density">▥ Compact</button>
         </div>
       </div>
 
@@ -73,6 +79,10 @@
             <div class="filter-label">Card type</div>
             <div class="filter-chips"></div>
           </div>
+          <div class="filter-group" id="filter-status">
+            <div class="filter-label">My status</div>
+            <div class="filter-chips"></div>
+          </div>
           <div class="filter-group salary-group">
             <div class="filter-label">Minimum salary <span id="salaryReadout" class="salary-readout">Any</span></div>
             <input type="range" id="salaryRange" min="0" max="225000" step="5000" value="0" />
@@ -83,6 +93,7 @@
 
       <div class="results-meta">
         <span id="resultCount"></span>
+        <span id="liveIndicator" class="live-indicator"></span>
         <div class="results-actions">
           <button class="linkbtn" id="markSeenBtn">Mark all as seen</button>
           <button class="linkbtn" id="clearFiltersBtn">Clear filters</button>
@@ -94,6 +105,15 @@
         <p>No opportunities match your filters.</p>
         <button class="linkbtn" onclick="document.getElementById('clearFiltersBtn').click()">Clear filters</button>
       </div>
+    </section>
+
+    <!-- ============================ MAP VIEW ========================= -->
+    <section id="view-map" class="view">
+      <div class="map-head">
+        <h2>Connecticut opportunities near Guilford</h2>
+        <span id="mapNote" class="map-note"></span>
+      </div>
+      <div id="map"></div>
     </section>
 
     <!-- ============================ BIO VIEW ========================= -->
@@ -143,15 +163,33 @@
     </div>
   </div>
 
+  <!-- ============================ OUTREACH MODAL ===================== -->
+  <div id="outreachModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="outreachTitle">Draft outreach</h2>
+        <button class="icon-btn" id="outreachClose" title="Close">✕</button>
+      </div>
+      <p class="modal-note">A starter draft built from this role + your résumé. Edit before sending.</p>
+      <textarea id="outreachText" class="outreach-text" rows="14"></textarea>
+      <div class="modal-actions">
+        <button class="btn primary" id="outreachCopy">Copy</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="sitefoot">
     <span>Private dashboard · hidden from search engines</span>
     <span id="footStamp"></span>
   </footer>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="assets/data/sync-config.js"></script>
   <script src="assets/data/jobs.js"></script>
   <script src="assets/data/bio.js"></script>
   <script src="assets/data/resume.js"></script>
+  <script src="assets/data/resume-variants.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

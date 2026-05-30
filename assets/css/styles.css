@@ -311,6 +311,104 @@ main { max-width: 1240px; margin: 0 auto; padding: 22px; }
 .btn.dl { flex: 0 0 auto; text-decoration: none; padding: 10px 16px; }
 .resume-foot-note { color: var(--text-mute); font-size: 12px; font-style: italic; margin-top: 18px; }
 
+/* ----------------------------- v1.1 additions ---------------------------- */
+.chip-count { opacity: .6; font-size: 10px; font-weight: 700; }
+.chip.active .chip-count { opacity: .85; }
+
+.sort-wrap-btn {
+  background: var(--surface); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 9px;
+  padding: 8px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.sort-wrap-btn:hover { border-color: var(--border-2); color: var(--text); }
+
+.live-indicator { color: var(--new); font-size: 12px; font-weight: 600; margin-left: 12px; }
+
+/* badges */
+.badge.live { background: rgba(63,185,80,.16); color: #7ee695; border: 1px solid rgba(63,185,80,.4); }
+.badge.expiring { background: rgba(255,166,87,.13); color: #ffc078; border: 1px solid rgba(255,166,87,.35); }
+.badge.st { color: #0d1117; font-weight: 800; }
+.badge.st-watching    { background: #8b97a8; }
+.badge.st-interested  { background: var(--accent); }
+.badge.st-applied     { background: var(--indigo); }
+.badge.st-interviewing{ background: var(--star); }
+.badge.st-passed      { background: #5a6675; color: #e6edf3; }
+
+/* status left-border accent on cards */
+.card.st-border-watching    { border-left: 3px solid #8b97a8; }
+.card.st-border-interested  { border-left: 3px solid var(--accent); }
+.card.st-border-applied     { border-left: 3px solid var(--indigo); }
+.card.st-border-interviewing{ border-left: 3px solid var(--star); }
+.card.st-border-passed      { border-left: 3px solid #5a6675; }
+.card.is-hidden { opacity: .55; }
+
+.meta-row .m.fit { color: var(--accent); }
+.icon-btn.note.on { color: var(--accent); border-color: var(--accent); background: rgba(79,209,197,.1); }
+.icon-btn.hide.on { color: var(--flag); border-color: var(--flag); background: rgba(255,123,114,.1); }
+
+/* per-card controls */
+.card-controls { display: flex; gap: 8px; align-items: center; }
+.status-select {
+  flex: 1; background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 9px; padding: 7px 9px; font-size: 12.5px;
+}
+.mini-btn {
+  background: var(--surface); color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.mini-btn:hover { border-color: var(--border-2); color: var(--text); }
+.note-box textarea {
+  width: 100%; margin-top: 2px; background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; font: inherit;
+  font-size: 12.5px; resize: vertical; min-height: 60px; outline: none;
+}
+.note-box textarea:focus { border-color: var(--accent-2); }
+
+/* compact density */
+body.compact .card { padding: 11px 12px 10px; gap: 7px; }
+body.compact .card-desc, body.compact .card-fit { display: none; }
+body.compact .cards-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 11px; }
+body.compact .card-title { font-size: 14.5px; }
+
+/* map */
+.map-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.map-head h2 { margin: 0; font-size: 18px; }
+.map-note { color: var(--text-dim); font-size: 13px; }
+#map { height: 560px; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+.leaflet-popup-content { font: inherit; }
+.leaflet-popup-content a { color: #1a6f68; font-weight: 700; }
+
+/* resume variants */
+.variant-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.variant-label { color: var(--text-mute); font-size: 12px; text-transform: uppercase; letter-spacing: .7px; font-weight: 700; margin-right: 4px; }
+.vbtn {
+  background: var(--surface); color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.vbtn:hover { border-color: var(--border-2); color: var(--text); }
+.vbtn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.resume-dl { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+
+/* outreach */
+.outreach-text {
+  width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; font: inherit; font-size: 13px; resize: vertical; outline: none;
+}
+.outreach-text:focus { border-color: var(--accent-2); }
+
+/* print: only the résumé view, light theme */
+@media print {
+  body.printing-resume { background: #fff; color: #111; }
+  body.printing-resume .topbar, body.printing-resume .sitefoot,
+  body.printing-resume #view-jobs, body.printing-resume #view-map, body.printing-resume #view-bio,
+  body.printing-resume .variant-bar, body.printing-resume .resume-dl, body.printing-resume .resume-foot-note { display: none !important; }
+  body.printing-resume #view-resume { display: block !important; }
+  body.printing-resume .bio-hero, body.printing-resume .skill-card { background: #fff; border: 1px solid #ddd; box-shadow: none; }
+  body.printing-resume .bio-hero h1, body.printing-resume .je-role, body.printing-resume .deg { color: #111; }
+  body.printing-resume .tagline, body.printing-resume .bio-section > h2 { color: #1a6f68; }
+  body.printing-resume .summary, body.printing-resume .job-entry ul, body.printing-resume .pill, body.printing-resume .je-co { color: #333; }
+}
+
 /* --------------------------------- Footer -------------------------------- */
 .sitefoot {
   display: flex; justify-content: space-between; max-width: 1240px;

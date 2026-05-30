@@ -1,34 +1,40 @@
 /* ============================================================================
-   jlejobs — app logic
-   - Tab navigation (Opportunities / Biography)
-   - Card rendering with filters, search, sort
-   - Star / flag / "new" state persisted in localStorage (per-browser)
+   jlejobs — app logic (v1.1.0)
+   Tabs · cards · filters/search/sort · star/flag/hide · status · notes ·
+   fit score · live listings (Greenhouse/Lever) · JSONBin sync · map · resume.
    ========================================================================== */
 (function () {
   "use strict";
 
   const LS = {
-    starred: "jle_starred",
-    flagged: "jle_flagged",
-    seen:    "jle_seen"
+    starred: "jle_starred", flagged: "jle_flagged", seen: "jle_seen",
+    hidden: "jle_hidden", status: "jle_status", notes: "jle_notes",
+    density: "jle_density"
   };
 
-  // ---- persisted sets -------------------------------------------------------
-  const load = (k) => new Set(JSON.parse(localStorage.getItem(k) || "[]"));
-  const save = (k, set) => localStorage.setItem(k, JSON.stringify([...set]));
-  const starred = load(LS.starred);
-  const flagged = load(LS.flagged);
-  let   seen    = load(LS.seen);
+  const loadSet = (k) => new Set(JSON.parse(localStorage.getItem(k) || "[]"));
+  const loadMap = (k) => JSON.parse(localStorage.getItem(k) || "{}");
+  const saveSet = (k, set) => localStorage.setItem(k, JSON.stringify([...set]));
+  const saveMap = (k, obj) => localStorage.setItem(k, JSON.stringify(obj));
 
-  // First-ever visit: treat everything as already seen EXCEPT nothing — we want
-  // the user to see the initial batch as "new", so leave `seen` empty on first run.
+  const starred = loadSet(LS.starred);
+  const flagged = loadSet(LS.flagged);
+  let   seen    = loadSet(LS.seen);
+  const hidden  = loadSet(LS.hidden);
+  let   status  = loadMap(LS.status); // {id: statusKey}
+  let   notes   = loadMap(LS.notes);  // {id: text}
+
+  const STATUS = [
+    { key: "watching",     label: "Watching" },
+    { key: "interested",   label: "Interested" },
+    { key: "applied",      label: "Applied" },
+    { key: "interviewing", label: "Interviewing" },
+    { key: "passed",       label: "Passed/Closed" }
+  ];
+  const statusLabel = (k) => (STATUS.find((s) => s.key === k) || {}).label || "";
 
   // ===================== JSONBin cross-device sync ==========================
-  // A built-in default config (assets/data/sync-config.js) enables sync on every
-  // device automatically. A per-device override or "turn off" via the Sync panel
-  // is stored in localStorage and takes priority over the default.
-  const SYNC_KEY = "jle_jsonbin";   // per-device override config
-  const SYNC_OFF = "jle_sync_off";  // set when user explicitly turns sync off
+  const SYNC_KEY = "jle_jsonbin", SYNC_OFF = "jle_sync_off";
   function resolveCfg() {
     const local = JSON.parse(localStorage.getItem(SYNC_KEY) || "null");
     if (local) return local;
@@ -36,8 +42,7 @@
     return window.JLE_SYNC_DEFAULT || null;
   }
   const sync = {
-    cfg: resolveCfg(), // {binId, key, keyType}
-    timer: null, pushing: false,
+    cfg: resolveCfg(), timer: null,
     on() { return !!(this.cfg && this.cfg.binId && this.cfg.key); },
     usingDefault() { return !localStorage.getItem(SYNC_KEY) && !!window.JLE_SYNC_DEFAULT && !localStorage.getItem(SYNC_OFF); },
     headers() {
@@ -48,156 +53,179 @@
     save(cfg) { this.cfg = cfg; localStorage.removeItem(SYNC_OFF); localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); },
     forget() { this.cfg = null; localStorage.removeItem(SYNC_KEY); localStorage.setItem(SYNC_OFF, "1"); }
   };
-
-  function setSyncState(text) {
-    const el = document.getElementById("syncState");
-    if (el) el.textContent = text;
-  }
-  function syncStatus(msg, kind) {
-    const el = document.getElementById("syncStatus");
-    if (el) { el.textContent = msg; el.className = "sync-status " + (kind || ""); }
-  }
+  function setSyncState(t) { const el = document.getElementById("syncState"); if (el) el.textContent = t; }
+  function syncStatus(msg, kind) { const el = document.getElementById("syncStatus"); if (el) { el.textContent = msg; el.className = "sync-status " + (kind || ""); } }
 
   async function syncPull() {
     if (!sync.on()) return false;
-    const url = "https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId) + "/latest";
-    const res = await fetch(url, { headers: sync.headers() });
+    const res = await fetch("https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId) + "/latest", { headers: sync.headers() });
     if (!res.ok) throw new Error("Pull failed (HTTP " + res.status + ")");
-    const data = await res.json();
-    const rec = (data && data.record) || {};
-    // starred/flagged: adopt remote (last-write-wins). seen: union (only grows).
+    const rec = ((await res.json()) || {}).record || {};
     if (Array.isArray(rec.starred)) { starred.clear(); rec.starred.forEach((x) => starred.add(x)); }
     if (Array.isArray(rec.flagged)) { flagged.clear(); rec.flagged.forEach((x) => flagged.add(x)); }
+    if (Array.isArray(rec.hidden))  { hidden.clear();  rec.hidden.forEach((x) => hidden.add(x)); }
     if (Array.isArray(rec.seen)) rec.seen.forEach((x) => seen.add(x));
-    // write merged result back to local cache
-    save(LS.starred, starred); save(LS.flagged, flagged); save(LS.seen, seen);
+    if (rec.status && typeof rec.status === "object") status = rec.status;
+    if (rec.notes && typeof rec.notes === "object") notes = rec.notes;
+    saveSet(LS.starred, starred); saveSet(LS.flagged, flagged); saveSet(LS.hidden, hidden);
+    saveSet(LS.seen, seen); saveMap(LS.status, status); saveMap(LS.notes, notes);
     return true;
   }
-
   async function syncPush() {
     if (!sync.on()) return false;
-    const body = JSON.stringify({ starred: [...starred], flagged: [...flagged], seen: [...seen] });
-    const url = "https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId);
-    const res = await fetch(url, { method: "PUT", headers: sync.headers(), body });
+    const body = JSON.stringify({ starred: [...starred], flagged: [...flagged], seen: [...seen], hidden: [...hidden], status, notes });
+    const res = await fetch("https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId), { method: "PUT", headers: sync.headers(), body });
     if (!res.ok) throw new Error("Push failed (HTTP " + res.status + ")");
     return true;
   }
-
   function scheduleSync() {
     if (!sync.on()) return;
-    clearTimeout(sync.timer);
-    setSyncState("syncing…");
+    clearTimeout(sync.timer); setSyncState("syncing…");
     sync.timer = setTimeout(async () => {
-      try { await syncPush(); setSyncState("synced ✓"); }
-      catch (e) { setSyncState("sync error"); }
+      try { await syncPush(); setSyncState("synced ✓"); } catch (e) { setSyncState("sync error"); }
     }, 1200);
   }
 
-  const JOBS = window.JOBS || [];
+  // ============================ data ========================================
+  let ALL = (window.JOBS || []).slice(); // static + live listings appended later
 
-  // ---- active filter state --------------------------------------------------
   const state = {
-    q: "",
-    sort: "new",
-    minSalary: 0,
-    toggles: { new: false, starred: false, flagged: false },
-    facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set() }
+    q: "", sort: "new", minSalary: 0,
+    toggles: { new: false, starred: false, flagged: false, hidden: false },
+    facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set(), status: new Set() }
   };
 
-  // ---- helpers --------------------------------------------------------------
-  const uniqueValues = (key) => {
-    const s = new Set();
-    JOBS.forEach((j) => {
-      const v = j[key];
-      if (Array.isArray(v)) v.forEach((x) => s.add(x));
-      else if (v) s.add(v);
-    });
-    return [...s].sort();
-  };
-
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const isNew = (j) => !seen.has(j.id);
   const kindLabel = { posting: "Posting", search: "Saved search", company: "Company watch" };
 
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // days since an ISO date (for expiry flags); null-safe
+  function daysSince(iso) {
+    if (!iso) return null;
+    const then = new Date(iso + "T00:00:00"); if (isNaN(then)) return null;
+    return Math.floor((Date.now() - then.getTime()) / 86400000);
+  }
+  function mayBeExpired(j) {
+    if (j.kind !== "posting" || j.live) return false;
+    const d = daysSince(j.posted || j.dateAdded);
+    return d != null && d > 45;
+  }
 
-  const isNew = (j) => !seen.has(j.id);
+  // ============================ fit score ===================================
+  const STOP = new Set("the and for with that into your you are role our who all team work across both able have this from will plus etc".split(" "));
+  function tokenize(s) { return (s || "").toLowerCase().match(/[a-z][a-z+#.]{2,}/g) || []; }
+  const resumeTokens = (() => {
+    const r = window.RESUME, set = new Set();
+    if (r) {
+      tokenize(r.title + " " + r.summary).forEach((t) => set.add(t));
+      (r.competencies || []).forEach((c) => { tokenize(c.group).forEach((t) => set.add(t)); c.items.forEach((i) => tokenize(i).forEach((t) => set.add(t))); });
+      (r.experience || []).forEach((e) => { tokenize(e.role).forEach((t) => set.add(t)); (e.bullets || []).forEach((b) => tokenize(b).forEach((t) => set.add(t))); });
+    }
+    STOP.forEach((t) => set.delete(t));
+    return set;
+  })();
+  function rawFit(j) {
+    let s = 0;
+    tokenize(j.title).forEach((t) => { if (resumeTokens.has(t)) s += 3; });
+    (j.roleFamily || []).forEach((r) => tokenize(r).forEach((t) => { if (resumeTokens.has(t)) s += 3; }));
+    (j.tags || []).forEach((g) => tokenize(g).forEach((t) => { if (resumeTokens.has(t)) s += 2; }));
+    tokenize(j.description + " " + (j.fit || "")).forEach((t) => { if (resumeTokens.has(t)) s += 1; });
+    return s;
+  }
+  let fitMax = 1;
+  function fitPct(j) { return Math.max(5, Math.round((rawFit(j) / fitMax) * 100)); }
 
-  // ====================== FILTER UI ==========================================
+  // ============================ filter UI ===================================
+  function countFor(key, val) {
+    return ALL.filter((j) => { const v = j[key]; return Array.isArray(v) ? v.includes(val) : v === val; }).length;
+  }
   function buildFacet(containerId, key) {
     const wrap = document.querySelector("#" + containerId + " .filter-chips");
     wrap.innerHTML = "";
-    const values = key === "kind"
-      ? ["posting", "search", "company"]
-      : uniqueValues(key);
+    const values = key === "kind" ? ["posting", "search", "company"] : uniqueValues(key);
     values.forEach((val) => {
       const chip = document.createElement("button");
-      chip.className = "chip";
-      chip.textContent = key === "kind" ? kindLabel[val] : val;
+      chip.className = "chip" + (state.facets[key].has(val) ? " active" : "");
+      chip.innerHTML = (key === "kind" ? kindLabel[val] : esc(val)) + ` <span class="chip-count">${countFor(key, val)}</span>`;
       chip.addEventListener("click", () => {
-        const set = state.facets[key];
-        set.has(val) ? set.delete(val) : set.add(val);
-        chip.classList.toggle("active");
-        render();
+        const set = state.facets[key]; set.has(val) ? set.delete(val) : set.add(val);
+        chip.classList.toggle("active"); render();
       });
       wrap.appendChild(chip);
     });
   }
+  function buildStatusFilter() {
+    const wrap = document.querySelector("#filter-status .filter-chips");
+    wrap.innerHTML = "";
+    STATUS.forEach((s) => {
+      const n = Object.values(status).filter((v) => v === s.key).length;
+      const chip = document.createElement("button");
+      chip.className = "chip" + (state.facets.status.has(s.key) ? " active" : "");
+      chip.innerHTML = esc(s.label) + (n ? ` <span class="chip-count">${n}</span>` : "");
+      chip.addEventListener("click", () => {
+        const set = state.facets.status; set.has(s.key) ? set.delete(s.key) : set.add(s.key);
+        chip.classList.toggle("active"); render();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+  function uniqueValues(key) {
+    const s = new Set();
+    ALL.forEach((j) => { const v = j[key]; if (Array.isArray(v)) v.forEach((x) => s.add(x)); else if (v) s.add(v); });
+    return [...s].sort();
+  }
 
-  // ====================== MATCHING ===========================================
+  // ============================ matching ====================================
   function matches(j) {
-    // text search
     if (state.q) {
-      const hay = [j.title, j.company, j.location, j.description, j.fit,
-        (j.tags || []).join(" "), (j.roleFamily || []).join(" ")].join(" ").toLowerCase();
+      const hay = [j.title, j.company, j.location, j.description, j.fit, (j.tags || []).join(" "), (j.roleFamily || []).join(" "), notes[j.id] || ""].join(" ").toLowerCase();
       if (!hay.includes(state.q)) return false;
     }
-    // toggles
+    if (state.toggles.hidden) { if (!hidden.has(j.id)) return false; }
+    else if (hidden.has(j.id)) return false;
     if (state.toggles.new && !isNew(j)) return false;
     if (state.toggles.starred && !starred.has(j.id)) return false;
     if (state.toggles.flagged && !flagged.has(j.id)) return false;
-    // facets (AND across groups, OR within group)
     const f = state.facets;
     if (f.roleFamily.size && !(j.roleFamily || []).some((r) => f.roleFamily.has(r))) return false;
     if (f.regions.size && !(j.regions || []).some((r) => f.regions.has(r))) return false;
     if (f.workMode.size && !f.workMode.has(j.workMode)) return false;
     if (f.kind.size && !f.kind.has(j.kind)) return false;
-    // salary: keep cards whose top of range meets the minimum
-    if (state.minSalary > 0 && (j.salaryMax || j.salaryMin || 0) < state.minSalary) return false;
+    if (f.status.size && !f.status.has(status[j.id] || "")) return false;
+    const top = j.salaryMax || j.salaryMin || 0;
+    if (state.minSalary > 0 && top > 0 && top < state.minSalary) return false;
     return true;
   }
-
   function sortJobs(list) {
     const arr = list.slice();
-    if (state.sort === "salary") {
-      arr.sort((a, b) => (b.salaryMax || b.salaryMin || 0) - (a.salaryMax || a.salaryMin || 0));
-    } else if (state.sort === "company") {
-      arr.sort((a, b) => a.company.localeCompare(b.company));
-    } else if (state.sort === "title") {
-      arr.sort((a, b) => a.title.localeCompare(b.title));
-    } else { // new: new first, then by dateAdded desc
-      arr.sort((a, b) => {
-        const n = (isNew(b) ? 1 : 0) - (isNew(a) ? 1 : 0);
-        if (n) return n;
-        return String(b.dateAdded).localeCompare(String(a.dateAdded));
-      });
-    }
+    if (state.sort === "salary") arr.sort((a, b) => (b.salaryMax || b.salaryMin || 0) - (a.salaryMax || a.salaryMin || 0));
+    else if (state.sort === "fit") arr.sort((a, b) => rawFit(b) - rawFit(a));
+    else if (state.sort === "company") arr.sort((a, b) => a.company.localeCompare(b.company));
+    else if (state.sort === "title") arr.sort((a, b) => a.title.localeCompare(b.title));
+    else arr.sort((a, b) => { const n = (isNew(b) ? 1 : 0) - (isNew(a) ? 1 : 0); return n || String(b.dateAdded).localeCompare(String(a.dateAdded)); });
     return arr;
   }
 
-  // ====================== CARD RENDER ========================================
+  // ============================ card render =================================
   function cardHTML(j) {
+    const st = status[j.id] || "";
+    const note = notes[j.id] || "";
     const newBadge = isNew(j) ? `<span class="badge new">NEW</span>` : "";
+    const liveBadge = j.live ? `<span class="badge live">● LIVE</span>` : "";
     const statusBadge = j.status === "verified" ? `<span class="badge verified">✓ verified</span>`
       : j.status === "snapshot" ? `<span class="badge snapshot">snapshot</span>` : "";
+    const expBadge = mayBeExpired(j) ? `<span class="badge expiring" title="Posting is older than 45 days — may be expired">⚠ may be expired</span>` : "";
+    const stBadge = st ? `<span class="badge st st-${st}">${esc(statusLabel(st))}</span>` : "";
     const tags = (j.tags || []).slice(0, 8).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
     const role = (j.roleFamily || []).join(" · ");
-    const salary = j.salary ? `<span class="m"><b>${esc(j.salary)}</b></span>` : "";
-    const posted = j.posted ? `<span class="m">📅 posted ${esc(j.posted)}</span>` : "";
-    const primaryLabel = j.kind === "search" ? "Open live search"
-      : j.kind === "company" ? "View careers" : "View posting";
+    const salary = j.salary ? `<span class="m"><b>${esc(j.salary)}</b></span>` : `<span class="m">💰 see posting</span>`;
+    const posted = j.posted ? `<span class="m">📅 ${esc(j.posted)}</span>` : "";
+    const fit = `<span class="m fit" title="Heuristic match to your résumé">🎯 Fit ${fitPct(j)}</span>`;
+    const primaryLabel = j.live ? "View posting" : j.kind === "search" ? "Open live search" : j.kind === "company" ? "View careers" : "View posting";
+    const statusOpts = `<option value="">— set status —</option>` + STATUS.map((s) => `<option value="${s.key}"${s.key === st ? " selected" : ""}>${esc(s.label)}</option>`).join("");
 
     return `
-    <article class="card${isNew(j) ? " is-new" : ""}" data-id="${esc(j.id)}">
+    <article class="card${isNew(j) ? " is-new" : ""}${st ? " has-status st-border-" + st : ""}${hidden.has(j.id) ? " is-hidden" : ""}" data-id="${esc(j.id)}">
       <div class="card-head">
         <div>
           <h3 class="card-title">${esc(j.title)}</h3>
@@ -206,26 +234,31 @@
         <div class="card-actions">
           <button class="icon-btn star${starred.has(j.id) ? " on" : ""}" data-act="star" title="Star (like)">★</button>
           <button class="icon-btn flag${flagged.has(j.id) ? " on" : ""}" data-act="flag" title="Flag">⚑</button>
+          <button class="icon-btn note${note ? " on" : ""}" data-act="note" title="Note">📝</button>
+          <button class="icon-btn hide${hidden.has(j.id) ? " on" : ""}" data-act="hide" title="${hidden.has(j.id) ? "Unhide" : "Hide"}">${hidden.has(j.id) ? "↩" : "🚫"}</button>
         </div>
       </div>
 
-      <div class="badges">
-        ${newBadge}
-        <span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>
-        ${statusBadge}
-      </div>
+      <div class="badges">${newBadge}${liveBadge}<span class="badge kind-${j.kind}">${kindLabel[j.kind]}</span>${statusBadge}${expBadge}${stBadge}</div>
 
       <div class="meta-row">
         <span class="m">📍 ${esc(j.location)}</span>
         <span class="m">🧭 ${esc(j.workMode)}</span>
-        ${salary}
-        ${posted}
+        ${salary}${posted}${fit}
       </div>
-      ${role ? `<div class="meta-row"><span class="m">🎯 ${esc(role)}</span></div>` : ""}
+      ${role ? `<div class="meta-row"><span class="m">🗂 ${esc(role)}</span></div>` : ""}
 
       ${j.description ? `<p class="card-desc">${esc(j.description)}</p>` : ""}
       ${j.fit ? `<div class="card-fit"><b>Fit:</b> ${esc(j.fit)}</div>` : ""}
       ${tags ? `<div class="tag-row">${tags}</div>` : ""}
+
+      <div class="card-controls">
+        <select class="status-select" data-act="status">${statusOpts}</select>
+        <button class="mini-btn" data-act="outreach">✍ Draft outreach</button>
+      </div>
+      <div class="note-box" data-note hidden>
+        <textarea placeholder="Private note (synced across your devices)…">${esc(note)}</textarea>
+      </div>
 
       <div class="card-foot">
         <a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${primaryLabel} ↗</a>
@@ -235,264 +268,345 @@
   }
 
   function render() {
-    const list = sortJobs(JOBS.filter(matches));
+    fitMax = Math.max(1, ...ALL.map(rawFit));
+    const list = sortJobs(ALL.filter(matches));
     const cards = document.getElementById("cards");
-    const empty = document.getElementById("emptyState");
     cards.innerHTML = list.map(cardHTML).join("");
-    empty.hidden = list.length > 0;
+    document.getElementById("emptyState").hidden = list.length > 0;
 
-    const total = JOBS.length;
-    const newCount = JOBS.filter(isNew).length;
+    const total = ALL.length, newCount = ALL.filter(isNew).length, hiddenCount = hidden.size;
     document.getElementById("resultCount").textContent =
-      `${list.length} of ${total} opportunities` + (newCount ? ` · ${newCount} new` : "");
+      `${list.length} of ${total} opportunities` + (newCount ? ` · ${newCount} new` : "") + (hiddenCount ? ` · ${hiddenCount} hidden` : "");
 
-    // wire card buttons
+    wireCards(cards);
+  }
+
+  function wireCards(cards) {
     cards.querySelectorAll(".icon-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const id = btn.closest(".card").dataset.id;
-        const act = btn.dataset.act;
-        const set = act === "star" ? starred : flagged;
-        set.has(id) ? set.delete(id) : set.add(id);
-        save(act === "star" ? LS.starred : LS.flagged, set);
-        btn.classList.toggle("on");
-        scheduleSync();
+        const card = btn.closest(".card"), id = card.dataset.id, act = btn.dataset.act;
+        if (act === "star" || act === "flag") {
+          const set = act === "star" ? starred : flagged;
+          set.has(id) ? set.delete(id) : set.add(id);
+          saveSet(act === "star" ? LS.starred : LS.flagged, set);
+          btn.classList.toggle("on"); scheduleSync();
+        } else if (act === "hide") {
+          hidden.has(id) ? hidden.delete(id) : hidden.add(id);
+          saveSet(LS.hidden, hidden); scheduleSync(); render();
+        } else if (act === "note") {
+          const box = card.querySelector("[data-note]"); box.hidden = !box.hidden;
+          if (!box.hidden) box.querySelector("textarea").focus();
+        }
       });
+    });
+    cards.querySelectorAll(".status-select").forEach((sel) => {
+      sel.addEventListener("change", () => {
+        const id = sel.closest(".card").dataset.id;
+        if (sel.value) status[id] = sel.value; else delete status[id];
+        saveMap(LS.status, status); scheduleSync(); buildStatusFilter(); render();
+      });
+    });
+    cards.querySelectorAll("[data-note] textarea").forEach((ta) => {
+      let t = null;
+      ta.addEventListener("input", () => {
+        const id = ta.closest(".card").dataset.id;
+        clearTimeout(t);
+        t = setTimeout(() => {
+          if (ta.value.trim()) notes[id] = ta.value; else delete notes[id];
+          saveMap(LS.notes, notes); scheduleSync();
+          const btn = ta.closest(".card").querySelector(".icon-btn.note");
+          btn.classList.toggle("on", !!ta.value.trim());
+        }, 700);
+      });
+    });
+    cards.querySelectorAll('[data-act="outreach"]').forEach((b) => {
+      b.addEventListener("click", () => openOutreach(b.closest(".card").dataset.id));
     });
   }
 
-  // ====================== BIO RENDER =========================================
+  // ============================ outreach modal ==============================
+  function openOutreach(id) {
+    const j = ALL.find((x) => x.id === id); if (!j) return;
+    const r = window.RESUME || {};
+    const fam = (j.roleFamily || ["this area"])[0];
+    const text =
+`Dear ${j.company} Hiring Team,
+
+I'm reaching out regarding the ${j.title} role. ${j.fit ? j.fit.replace(/^Fit:\s*/, "") : ""}
+
+As a SAFe-certified Staff Product Owner whose background spans ${fam.toLowerCase()}, instructional design, technical communication, and a Computer Science & Computer Engineering foundation, I bring an unusual combination of product ownership and the ability to make complex products usable for both engineers and end users. ${r.summary ? r.summary.split(".").slice(0, 1)[0] + "." : ""}
+
+I'd welcome the chance to discuss how I could contribute to your team.
+
+Best regards,
+John L. Evans
+${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact && r.contact.phone) || "(203) 676-3551"}`;
+    document.getElementById("outreachTitle").textContent = "Draft outreach — " + j.title + " · " + j.company;
+    document.getElementById("outreachText").value = text;
+    document.getElementById("outreachModal").hidden = false;
+  }
+
+  // ============================ bio / resume ================================
   function renderBio() {
-    const b = window.BIO;
-    if (!b) return;
+    const b = window.BIO; if (!b) return;
     const exp = b.experience.map((e) => `
-      <div class="job-entry">
-        <div class="je-head">
-          <div><span class="je-role">${esc(e.role)}</span> &nbsp;<span class="je-co">${esc(e.company)} · ${esc(e.where)}</span></div>
-          <div class="je-dates">${esc(e.dates)}</div>
-        </div>
-        <ul>${e.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
-      </div>`).join("");
-
-    const skills = b.skills.map((s) => `
-      <div class="skill-card">
-        <h3>${esc(s.group)}</h3>
-        <div class="pills">${s.items.map((i) => `<span class="pill">${esc(i)}</span>`).join("")}</div>
-      </div>`).join("");
-
-    const edu = b.education.map((e) => `
-      <div class="edu-item">
-        <div><div class="deg">${esc(e.deg)}</div><div class="school">${esc(e.school)}</div></div>
-        <div class="yr">${esc(e.yr)}</div>
-      </div>`).join("");
-
+      <div class="job-entry"><div class="je-head">
+        <div><span class="je-role">${esc(e.role)}</span> &nbsp;<span class="je-co">${esc(e.company)} · ${esc(e.where)}</span></div>
+        <div class="je-dates">${esc(e.dates)}</div></div>
+        <ul>${e.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`).join("");
+    const skills = b.skills.map((s) => `<div class="skill-card"><h3>${esc(s.group)}</h3><div class="pills">${s.items.map((i) => `<span class="pill">${esc(i)}</span>`).join("")}</div></div>`).join("");
+    const edu = b.education.map((e) => `<div class="edu-item"><div><div class="deg">${esc(e.deg)}</div><div class="school">${esc(e.school)}</div></div><div class="yr">${esc(e.yr)}</div></div>`).join("");
     document.getElementById("bioContent").innerHTML = `
-      <div class="bio-hero">
-        <h1>${esc(b.name)}</h1>
-        <div class="tagline">${esc(b.tagline)}</div>
-        <div class="contact">
-          <span>📍 ${esc(b.location)}</span>
-          <a href="mailto:${esc(b.email)}">✉ ${esc(b.email)}</a>
-          <span>📞 ${esc(b.phone)}</span>
-        </div>
-        <p class="summary">${esc(b.summary)}</p>
-      </div>
+      <div class="bio-hero"><h1>${esc(b.name)}</h1><div class="tagline">${esc(b.tagline)}</div>
+        <div class="contact"><span>📍 ${esc(b.location)}</span><a href="mailto:${esc(b.email)}">✉ ${esc(b.email)}</a><span>📞 ${esc(b.phone)}</span></div>
+        <p class="summary">${esc(b.summary)}</p></div>
       <div class="bio-section"><h2>Experience</h2>${exp}</div>
       <div class="bio-section"><h2>Skills</h2><div class="skill-grid">${skills}</div></div>
-      <div class="bio-section"><h2>Certifications</h2>
-        <div class="tag-row">${b.certifications.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div>
-      </div>
+      <div class="bio-section"><h2>Certifications</h2><div class="tag-row">${b.certifications.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div></div>
       <div class="bio-section"><h2>Education</h2>${edu}</div>`;
   }
 
-  // ====================== RESUME RENDER ======================================
+  let resumeVariant = "general";
   function renderResume() {
-    const r = window.RESUME;
-    if (!r) return;
-    const comp = r.competencies.map((c) => `
-      <div class="skill-card">
-        <h3>${esc(c.group)}</h3>
-        <div class="pills">${c.items.map((i) => `<span class="pill">${esc(i)}</span>`).join("")}</div>
-      </div>`).join("");
+    const r = window.RESUME; if (!r) return;
+    const variants = window.RESUME_VARIANTS || [{ key: "general", label: "General", title: r.title, summary: r.summary, downloadFile: r.downloadFile }];
+    const v = variants.find((x) => x.key === resumeVariant) || variants[0];
+    // competency ordering: lead with the variant's emphasis group(s)
+    let comps = r.competencies.slice();
+    if (v.lead) comps.sort((a, b) => (v.lead.includes(b.group) ? 1 : 0) - (v.lead.includes(a.group) ? 1 : 0));
+    const compHTML = comps.map((c) => `<div class="skill-card"><h3>${esc(c.group)}</h3><div class="pills">${c.items.map((i) => `<span class="pill">${esc(i)}</span>`).join("")}</div></div>`).join("");
     const exp = r.experience.map((e) => `
-      <div class="job-entry">
-        <div class="je-head">
-          <div><span class="je-role">${esc(e.role)}</span> &nbsp;<span class="je-co">${esc(e.company)} · ${esc(e.where)}</span></div>
-          <div class="je-dates">${esc(e.dates)}</div>
-        </div>
-        <ul>${e.bullets.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
-      </div>`).join("");
-    const edu = r.education.map((e) => `
-      <div class="edu-item">
-        <div><div class="deg">${esc(e.deg)}</div><div class="school">${esc(e.school)}</div></div>
-        <div class="yr">${esc(e.yr)}</div>
-      </div>`).join("");
+      <div class="job-entry"><div class="je-head">
+        <div><span class="je-role">${esc(e.role)}</span> &nbsp;<span class="je-co">${esc(e.company)} · ${esc(e.where)}</span></div>
+        <div class="je-dates">${esc(e.dates)}</div></div>
+        <ul>${e.bullets.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`).join("");
+    const edu = r.education.map((e) => `<div class="edu-item"><div><div class="deg">${esc(e.deg)}</div><div class="school">${esc(e.school)}</div></div><div class="yr">${esc(e.yr)}</div></div>`).join("");
+    const variantBtns = variants.map((x) => `<button class="vbtn${x.key === resumeVariant ? " active" : ""}" data-variant="${x.key}">${esc(x.label)}</button>`).join("");
 
     document.getElementById("resumeContent").innerHTML = `
-      <div class="bio-hero">
-        <div class="resume-top">
-          <div>
-            <h1>${esc(r.name)}</h1>
-            <div class="tagline">${esc(r.title)}</div>
-            <div class="contact">
-              <span>📍 ${esc(r.contact.location)}</span>
-              <a href="mailto:${esc(r.contact.email)}">✉ ${esc(r.contact.email)}</a>
-              <span>📞 ${esc(r.contact.phone)}</span>
-            </div>
-          </div>
-          <a class="btn primary dl" href="${esc(r.downloadFile)}" download>⬇ Download Word résumé</a>
-        </div>
-        <p class="summary">${esc(r.summary)}</p>
-      </div>
-      <div class="bio-section"><h2>Core Competencies</h2><div class="skill-grid">${comp}</div></div>
+      <div class="variant-bar"><span class="variant-label">Tailored version:</span>${variantBtns}</div>
+      <div class="bio-hero"><div class="resume-top"><div>
+        <h1>${esc(r.name)}</h1><div class="tagline">${esc(v.title)}</div>
+        <div class="contact"><span>📍 ${esc(r.contact.location)}</span><a href="mailto:${esc(r.contact.email)}">✉ ${esc(r.contact.email)}</a><span>📞 ${esc(r.contact.phone)}</span></div>
+      </div><div class="resume-dl">
+        <a class="btn primary dl" href="${esc(v.downloadFile)}" download>⬇ Word (.docx)</a>
+        <button class="btn ghost dl" id="printResume">🖨 Save as PDF</button>
+      </div></div>
+      <p class="summary">${esc(v.summary)}</p></div>
+      <div class="bio-section"><h2>Core Competencies</h2><div class="skill-grid">${compHTML}</div></div>
       <div class="bio-section"><h2>Professional Experience</h2>${exp}</div>
-      <div class="bio-section"><h2>Certifications</h2>
-        <div class="tag-row">${r.certifications.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div>
-      </div>
+      <div class="bio-section"><h2>Certifications</h2><div class="tag-row">${r.certifications.map((c) => `<span class="tag">${esc(c)}</span>`).join("")}</div></div>
       <div class="bio-section"><h2>Education</h2>${edu}</div>
-      <p class="resume-foot-note">This is an AI-restructured version of your résumé (modern format, achievement-oriented).
-      The downloadable Word file matches it. Street address intentionally omitted per current best practice.</p>`;
+      <p class="resume-foot-note">AI-restructured résumé. Switch the tailored version above to re-emphasize for a target role; each has its own Word download. "Save as PDF" prints this view.</p>`;
+
+    document.querySelectorAll(".vbtn").forEach((b) => b.addEventListener("click", () => { resumeVariant = b.dataset.variant; renderResume(); }));
+    document.getElementById("printResume").addEventListener("click", () => { document.body.classList.add("printing-resume"); window.print(); setTimeout(() => document.body.classList.remove("printing-resume"), 500); });
   }
 
-  // ====================== SYNC MODAL WIRING ==================================
+  // ============================ sync UI =====================================
   function initSyncUI() {
     const modal = document.getElementById("syncModal");
     const open = () => {
-      if (sync.cfg) {
-        document.getElementById("binId").value = sync.cfg.binId || "";
-        document.getElementById("binKey").value = sync.cfg.key || "";
-        document.getElementById("binKeyType").value = sync.cfg.keyType || "access";
-      }
-      syncStatus(
-        sync.on()
-          ? (sync.usingDefault()
-              ? "Sync is ON via the built-in default — works on all devices automatically."
-              : "Sync is ON (per-device override).")
-          : "Sync is off on this device.",
-        sync.on() ? "ok" : "");
+      if (sync.cfg) { document.getElementById("binId").value = sync.cfg.binId || ""; document.getElementById("binKey").value = sync.cfg.key || ""; document.getElementById("binKeyType").value = sync.cfg.keyType || "access"; }
+      syncStatus(sync.on() ? (sync.usingDefault() ? "Sync is ON via the built-in default — works on all devices automatically." : "Sync is ON (per-device override).") : "Sync is off on this device.", sync.on() ? "ok" : "");
       modal.hidden = false;
     };
     const close = () => { modal.hidden = true; };
-
     document.getElementById("syncBtn").addEventListener("click", open);
     document.getElementById("syncClose").addEventListener("click", close);
     modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
-
     document.getElementById("syncSave").addEventListener("click", async () => {
-      const binId = document.getElementById("binId").value.trim();
-      const key = document.getElementById("binKey").value.trim();
-      const keyType = document.getElementById("binKeyType").value;
+      const binId = document.getElementById("binId").value.trim(), key = document.getElementById("binKey").value.trim(), keyType = document.getElementById("binKeyType").value;
       if (!binId || !key) { syncStatus("Enter both a Bin ID and a key.", "err"); return; }
-      sync.save({ binId, key, keyType });
-      syncStatus("Saved. Syncing…", "");
-      try {
-        await syncPull(); await syncPush();
-        setSyncState("synced ✓"); syncStatus("Connected and synced ✓", "ok"); render();
-      } catch (e) { setSyncState("sync error"); syncStatus(String(e.message || e), "err"); }
+      sync.save({ binId, key, keyType }); syncStatus("Saved. Syncing…", "");
+      try { await syncPull(); await syncPush(); setSyncState("synced ✓"); syncStatus("Connected and synced ✓", "ok"); refreshFacets(); render(); }
+      catch (e) { setSyncState("sync error"); syncStatus(String(e.message || e), "err"); }
     });
-
     document.getElementById("syncNow").addEventListener("click", async () => {
       if (!sync.on()) { syncStatus("Save a Bin ID + key first.", "err"); return; }
       syncStatus("Syncing…", "");
-      try { await syncPull(); await syncPush(); setSyncState("synced ✓"); syncStatus("Synced ✓", "ok"); render(); }
+      try { await syncPull(); await syncPush(); setSyncState("synced ✓"); syncStatus("Synced ✓", "ok"); refreshFacets(); render(); }
       catch (e) { setSyncState("sync error"); syncStatus(String(e.message || e), "err"); }
     });
-
-    document.getElementById("syncDisable").addEventListener("click", () => {
-      sync.forget();
-      document.getElementById("binId").value = "";
-      document.getElementById("binKey").value = "";
-      setSyncState("Sync off"); syncStatus("Turned off; key removed from this browser.", "");
-    });
+    document.getElementById("syncDisable").addEventListener("click", () => { sync.forget(); document.getElementById("binId").value = ""; document.getElementById("binKey").value = ""; setSyncState("Sync off"); syncStatus("Turned off; key removed from this browser.", ""); });
   }
 
-  // ====================== WIRING =============================================
+  // ============================ live listings ===============================
+  // CORS-enabled JSON boards. Roles filtered to John's families + remote/CT.
+  const LIVE_BOARDS = [
+    { src: "greenhouse", token: "datadog", label: "Datadog" },
+    { src: "greenhouse", token: "gitlab", label: "GitLab" },
+    { src: "greenhouse", token: "asana", label: "Asana" },
+    { src: "greenhouse", token: "samsara", label: "Samsara" },
+    { src: "greenhouse", token: "klaviyo", label: "Klaviyo" }
+  ];
+  const ROLE_RX = [
+    [/product\s+(owner|manager)/i, "Product Owner / PM"],
+    [/instructional|curriculum|learning experience|learning designer/i, "Instructional Design / L&D"],
+    [/enablement|customer education|technical trainer|\btrainer\b/i, "Customer Education / Enablement"],
+    [/learning|training|\bl&d\b/i, "Instructional Design / L&D"],
+    [/technical writer|documentation|content strateg/i, "Technical Writing / Content"],
+    [/scrum master|agile coach|release train/i, "Scrum Master / Agile"],
+    [/business analyst|systems analyst/i, "Business Analyst"],
+    [/customer success/i, "Customer Education / Enablement"],
+    [/implementation|solutions consultant|onboarding/i, "Solutions / Implementation"],
+    [/program manager|technical program/i, "Product Owner / PM"]
+  ];
+  const TITLE_RX = /product\s+(owner|manager)|instructional|curriculum|enablement|learning|training|technical writer|documentation|content strateg|scrum master|agile coach|release train|business analyst|systems analyst|customer success|implementation|solutions consultant|onboarding|program manager/i;
+  const EXCLUDE_RX = /intern|sales (rep|develop|account)|sdr|\bbdr\b|engineer$|software engineer|director|vp,|vice president|recruit/i;
+  function locOK(loc) {
+    const l = (loc || "").toLowerCase();
+    if (/connecticut|new haven|hartford|stamford|norwalk|\bct\b/.test(l)) return true;
+    if (/remote/.test(l) && /(us|u\.s|usa|united states|america|north america|anywhere|nationwide)/.test(l)) return true;
+    if (/^remote$/.test(l.trim())) return true;
+    return false;
+  }
+  function rolesFor(title) {
+    const out = []; ROLE_RX.forEach(([rx, fam]) => { if (rx.test(title) && !out.includes(fam)) out.push(fam); });
+    return out.length ? out : ["Product Owner / PM"];
+  }
+  async function fetchBoard(b) {
+    try {
+      const res = await fetch("https://boards-api.greenhouse.io/v1/boards/" + b.token + "/jobs");
+      if (!res.ok) return [];
+      const jobs = ((await res.json()) || {}).jobs || [];
+      const out = [];
+      for (const j of jobs) {
+        const title = j.title || "", loc = (j.location || {}).name || "";
+        if (!TITLE_RX.test(title) || EXCLUDE_RX.test(title) || !locOK(loc)) continue;
+        const remote = /remote/i.test(loc);
+        out.push({
+          id: "live-" + b.token + "-" + j.id, kind: "posting", status: "live", live: true,
+          title, company: b.label, location: loc, workMode: remote ? "Remote" : "Hybrid",
+          regions: /connecticut|new haven|hartford|stamford|norwalk|\bct\b/i.test(loc) ? ["Connecticut"] : ["Remote"],
+          roleFamily: rolesFor(title), salary: "", salaryMin: null, salaryMax: null,
+          posted: (j.updated_at || "").slice(0, 10), dateAdded: new Date().toISOString().slice(0, 10),
+          source: "Greenhouse / " + b.label, applyUrl: j.absolute_url, altUrl: "",
+          tags: ["Live feed", b.label, remote ? "Remote" : "Onsite/Hybrid"],
+          description: "Live listing pulled directly from " + b.label + "'s careers board.",
+          fit: ""
+        });
+        if (out.length >= 8) break;
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+  async function loadLive() {
+    const ind = document.getElementById("liveIndicator");
+    if (ind) ind.textContent = "⟳ loading live listings…";
+    const results = await Promise.allSettled(LIVE_BOARDS.map(fetchBoard));
+    const live = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+    if (live.length) { ALL = ALL.concat(live); refreshFacets(); render(); }
+    if (ind) ind.textContent = live.length ? `● ${live.length} live listings included` : "";
+  }
+
+  function refreshFacets() {
+    buildFacet("filter-roleFamily", "roleFamily");
+    buildFacet("filter-regions", "regions");
+    buildFacet("filter-workMode", "workMode");
+    buildFacet("filter-kind", "kind");
+    buildStatusFilter();
+  }
+
+  // ============================ map =========================================
+  const CITY = {
+    guilford: [41.2895, -72.6816], branford: [41.2793, -72.8151], "new haven": [41.3083, -72.9279],
+    hamden: [41.3959, -72.8968], "west haven": [41.2707, -72.947], hartford: [41.7637, -72.6851],
+    bloomfield: [41.8265, -72.7401], "new britain": [41.6612, -72.7795], stamford: [41.0534, -73.5387],
+    norwalk: [41.1177, -73.4082], wilton: [41.1954, -73.4379], ridgefield: [41.2815, -73.4982], groton: [41.3501, -72.0784]
+  };
+  let mapInited = false;
+  function initMap() {
+    if (mapInited || typeof L === "undefined") return;
+    mapInited = true;
+    const map = L.map("map", { scrollWheelZoom: false }).setView([41.45, -72.75], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 14 }).addTo(map);
+    L.circleMarker([41.2895, -72.6816], { radius: 7, color: "#f5c451", fillColor: "#f5c451", fillOpacity: 1 }).addTo(map).bindPopup("<b>Home — Guilford, CT</b>");
+    const byCity = {};
+    ALL.filter((j) => (j.regions || []).includes("Connecticut") && !hidden.has(j.id)).forEach((j) => {
+      const l = (j.location || "").toLowerCase();
+      const city = Object.keys(CITY).find((c) => l.includes(c));
+      if (!city) return; (byCity[city] = byCity[city] || []).push(j);
+    });
+    Object.entries(byCity).forEach(([city, jobs]) => {
+      jobs.forEach((j, i) => {
+        const [lat, lng] = CITY[city];
+        const off = i * 0.012;
+        L.marker([lat + off, lng + off]).addTo(map)
+          .bindPopup(`<b>${esc(j.title)}</b><br>${esc(j.company)}<br>${esc(j.location)}<br><a href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Open ↗</a>`);
+      });
+    });
+    document.getElementById("mapNote").textContent = `${Object.values(byCity).flat().length} Connecticut opportunities mapped (gold = home).`;
+  }
+
+  // ============================ wiring ======================================
   function init() {
-    // tabs
     document.getElementById("tabs").addEventListener("click", (e) => {
-      const btn = e.target.closest(".tab");
-      if (!btn) return;
+      const btn = e.target.closest(".tab"); if (!btn) return;
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
       document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
       document.getElementById("view-" + view).classList.add("active");
+      if (view === "map") setTimeout(initMap, 60);
     });
 
-    // facets
-    buildFacet("filter-roleFamily", "roleFamily");
-    buildFacet("filter-regions", "regions");
-    buildFacet("filter-workMode", "workMode");
-    buildFacet("filter-kind", "kind");
+    refreshFacets();
 
-    // search
-    document.getElementById("searchBox").addEventListener("input", (e) => {
-      state.q = e.target.value.trim().toLowerCase();
-      render();
-    });
+    document.getElementById("searchBox").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); render(); });
+    document.getElementById("sortBy").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
 
-    // sort
-    document.getElementById("sortBy").addEventListener("change", (e) => {
-      state.sort = e.target.value; render();
-    });
-
-    // salary slider
-    const salaryRange = document.getElementById("salaryRange");
-    const salaryReadout = document.getElementById("salaryReadout");
+    const salaryRange = document.getElementById("salaryRange"), salaryReadout = document.getElementById("salaryReadout");
     const fmtSalary = (v) => v <= 0 ? "Any" : "$" + Math.round(v / 1000) + "k+";
-    salaryRange.addEventListener("input", (e) => {
-      state.minSalary = +e.target.value;
-      salaryReadout.textContent = fmtSalary(state.minSalary);
-      render();
-    });
+    salaryRange.addEventListener("input", (e) => { state.minSalary = +e.target.value; salaryReadout.textContent = fmtSalary(state.minSalary); render(); });
 
-    // quick toggles
     document.getElementById("quickFilters").addEventListener("click", (e) => {
-      const btn = e.target.closest(".toggle");
-      if (!btn) return;
-      const key = btn.dataset.toggle;
-      state.toggles[key] = !state.toggles[key];
-      btn.classList.toggle("active");
-      render();
+      const btn = e.target.closest(".toggle"); if (!btn) return;
+      const key = btn.dataset.toggle; state.toggles[key] = !state.toggles[key]; btn.classList.toggle("active"); render();
     });
 
-    // mark all seen
-    document.getElementById("markSeenBtn").addEventListener("click", () => {
-      JOBS.forEach((j) => seen.add(j.id));
-      save(LS.seen, seen);
-      scheduleSync();
-      render();
+    document.getElementById("densityBtn").addEventListener("click", () => {
+      document.body.classList.toggle("compact");
+      const on = document.body.classList.contains("compact");
+      localStorage.setItem(LS.density, on ? "compact" : "");
+      document.getElementById("densityBtn").textContent = on ? "▤ Comfortable" : "▥ Compact";
     });
+    if (localStorage.getItem(LS.density) === "compact") { document.body.classList.add("compact"); document.getElementById("densityBtn").textContent = "▤ Comfortable"; }
 
-    // clear filters
+    document.getElementById("markSeenBtn").addEventListener("click", () => { ALL.forEach((j) => seen.add(j.id)); saveSet(LS.seen, seen); scheduleSync(); render(); });
     document.getElementById("clearFiltersBtn").addEventListener("click", () => {
       state.q = ""; document.getElementById("searchBox").value = "";
-      state.minSalary = 0;
-      document.getElementById("salaryRange").value = 0;
-      document.getElementById("salaryReadout").textContent = "Any";
+      state.minSalary = 0; salaryRange.value = 0; salaryReadout.textContent = "Any";
       Object.keys(state.toggles).forEach((k) => (state.toggles[k] = false));
       Object.values(state.facets).forEach((s) => s.clear());
-      document.querySelectorAll(".chip.active").forEach((c) => c.classList.remove("active"));
+      document.querySelectorAll(".chip.active, .toggle.active").forEach((c) => c.classList.remove("active"));
       render();
     });
 
-    // stamps
+    // outreach modal
+    const om = document.getElementById("outreachModal");
+    document.getElementById("outreachClose").addEventListener("click", () => { om.hidden = true; });
+    om.addEventListener("click", (e) => { if (e.target === om) om.hidden = true; });
+    document.getElementById("outreachCopy").addEventListener("click", async () => {
+      const ta = document.getElementById("outreachText");
+      try { await navigator.clipboard.writeText(ta.value); document.getElementById("outreachCopy").textContent = "Copied ✓"; setTimeout(() => document.getElementById("outreachCopy").textContent = "Copy", 1500); }
+      catch (e) { ta.select(); document.execCommand("copy"); }
+    });
+
     const stamp = "Data refreshed " + (window.JOBS_GENERATED || "—");
     document.getElementById("updatedStamp").textContent = stamp;
     document.getElementById("footStamp").textContent = stamp;
 
-    renderBio();
-    renderResume();
-    initSyncUI();
-    render();
+    renderBio(); renderResume(); initSyncUI(); render();
 
-    // If sync configured, pull remote state then re-render.
-    if (sync.on()) {
-      setSyncState("syncing…");
-      syncPull()
-        .then(() => { setSyncState("synced ✓"); render(); })
-        .catch(() => setSyncState("sync error"));
-    }
+    // refocus pull
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }
+    });
+
+    if (sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }
+    loadLive();
   }
 
   document.addEventListener("DOMContentLoaded", init);

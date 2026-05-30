@@ -3,6 +3,21 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.4.0 — 2026-05-30
+- **Commute estimate** on CT cards (~miles + rough drive time from Guilford) + a new
+  "Closest (CT)" sort.
+- **Salary on live cards** — pulls compensation from Ashby boards where published, so
+  the salary slider now works on those live listings (~14 surfaced with pay).
+- **Cross-source de-dup** — live cards that duplicate a curated card (or each other)
+  are collapsed by company+title.
+- **JD keyword-gap analyzer** (🧪 JD match) — paste a job description; see which terms
+  your résumé covers vs. gaps to address. Runs entirely in-browser.
+- **Cover-letter download** — the outreach draft now has a "Download (Word)" button.
+- **Saved filter presets** — save the current filter set by name and re-apply in one click.
+- **Card detail modal** — click a card title for a full detail view.
+- (Link-health check intentionally deferred — can't reliably check external URLs from a
+  static page due to CORS; better handled by the monthly cloud routine.)
+
 ## v1.3.0 — 2026-05-30
 - **New "Grow" tab** — researched professional-development & certifications to stay
   competitive as a Product Owner, with a Product Manager sub-section (adjacent roles

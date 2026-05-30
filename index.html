@@ -59,11 +59,13 @@
             <option value="new">Newest added</option>
             <option value="fit">Best fit</option>
             <option value="salary">Salary (high→low)</option>
+            <option value="commute">Closest (CT)</option>
             <option value="company">Company A→Z</option>
             <option value="title">Title A→Z</option>
           </select>
           <button class="sort-wrap-btn" id="densityBtn" title="Toggle card density">▥ Compact</button>
           <button class="sort-wrap-btn" id="watchlistBtn" title="Highlight & pin cards matching your keywords">⭐ Watchlist</button>
+          <button class="sort-wrap-btn" id="jdBtn" title="Paste a job description to see how it matches your résumé">🧪 JD match</button>
         </div>
       </div>
 
@@ -103,6 +105,12 @@
             <div class="salary-scale"><span>$0</span><span>$225k+</span></div>
           </div>
         </div>
+      </div>
+
+      <div class="presets-bar" id="presetsBar">
+        <span class="presets-label">Presets</span>
+        <div class="preset-chips" id="presetChips"></div>
+        <button class="linkbtn" id="savePresetBtn">＋ Save current filters</button>
       </div>
 
       <div class="results-meta">
@@ -204,7 +212,35 @@
       <textarea id="outreachText" class="outreach-text" rows="14"></textarea>
       <div class="modal-actions">
         <button class="btn primary" id="outreachCopy">Copy</button>
+        <button class="btn ghost" id="outreachDownload">⬇ Download (Word)</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================ JD MATCH MODAL ===================== -->
+  <div id="jdModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>🧪 JD keyword-gap analyzer</h2>
+        <button class="icon-btn" id="jdClose" title="Close">✕</button>
+      </div>
+      <p class="modal-note">Paste a job description. I'll compare its key terms against your résumé and show what you already cover vs. gaps worth addressing (or weaving into a tailored résumé/cover letter). Nothing leaves your browser.</p>
+      <textarea id="jdText" class="outreach-text" rows="8" placeholder="Paste the full job description here…"></textarea>
+      <div class="modal-actions">
+        <button class="btn primary" id="jdAnalyze">Analyze</button>
+      </div>
+      <div id="jdResult" class="jd-result"></div>
+    </div>
+  </div>
+
+  <!-- ============================ CARD DETAIL MODAL ================== -->
+  <div id="detailModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="detailTitle">Details</h2>
+        <button class="icon-btn" id="detailClose" title="Close">✕</button>
+      </div>
+      <div id="detailBody" class="detail-body"></div>
     </div>
   </div>
 

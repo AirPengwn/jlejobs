@@ -206,6 +206,7 @@
     const arr = list.slice();
     if (state.sort === "salary") arr.sort((a, b) => (b.salaryMax || b.salaryMin || 0) - (a.salaryMax || a.salaryMin || 0));
     else if (state.sort === "fit") arr.sort((a, b) => rawFit(b) - rawFit(a));
+    else if (state.sort === "commute") arr.sort((a, b) => { const ca = commuteInfo(a), cb = commuteInfo(b); return (ca ? ca.min : Infinity) - (cb ? cb.min : Infinity); });
     else if (state.sort === "company") arr.sort((a, b) => a.company.localeCompare(b.company));
     else if (state.sort === "title") arr.sort((a, b) => a.title.localeCompare(b.title));
     else arr.sort((a, b) => { const n = (isNew(b) ? 1 : 0) - (isNew(a) ? 1 : 0); return n || String(b.dateAdded).localeCompare(String(a.dateAdded)); });
@@ -227,6 +228,8 @@
     const salary = j.salary ? `<span class="m"><b>${esc(j.salary)}</b></span>` : `<span class="m">💰 see posting</span>`;
     const posted = j.posted ? `<span class="m">📅 ${esc(j.posted)}</span>` : "";
     const fit = `<span class="m fit" title="Heuristic match to your résumé">🎯 Fit ${fitPct(j)}</span>`;
+    const ci = commuteInfo(j);
+    const commute = ci && ci.mi > 0 ? `<span class="m" title="Straight-line distance + rough drive estimate from Guilford">🚗 ~${ci.mi} mi · ~${ci.min} min</span>` : (ci ? `<span class="m">🚗 Guilford (home)</span>` : "");
     const primaryLabel = j.live ? "View posting" : j.kind === "search" ? "Open live search" : j.kind === "company" ? "View careers" : "View posting";
     const statusOpts = `<option value="">— set status —</option>` + STATUS.map((s) => `<option value="${s.key}"${s.key === st ? " selected" : ""}>${esc(s.label)}</option>`).join("");
 
@@ -250,7 +253,7 @@
       <div class="meta-row">
         <span class="m">📍 ${esc(j.location)}</span>
         <span class="m">🧭 ${esc(j.workMode)}</span>
-        ${salary}${posted}${fit}
+        ${commute}${salary}${posted}${fit}
       </div>
       ${role ? `<div class="meta-row"><span class="m">🗂 ${esc(role)}</span></div>` : ""}
 
@@ -289,6 +292,10 @@
   }
 
   function wireCards(cards) {
+    cards.querySelectorAll(".card-title").forEach((t) => {
+      t.style.cursor = "pointer";
+      t.addEventListener("click", () => openDetail(t.closest(".card").dataset.id));
+    });
     cards.querySelectorAll(".icon-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -493,11 +500,12 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       }));
     }
     if (b.src === "ashby") {
-      const res = await fetch("https://api.ashbyhq.com/posting-api/job-board/" + b.token);
+      const res = await fetch("https://api.ashbyhq.com/posting-api/job-board/" + b.token + "?includeCompensation=true");
       if (!res.ok) return [];
       return (((await res.json()) || {}).jobs || []).filter((j) => j.isListed !== false).map((j) => ({
         title: j.title || "", loc: j.location || (j.isRemote ? "Remote" : ""), url: j.jobUrl || j.applyUrl,
-        posted: (j.publishedAt || "").slice(0, 10), id: j.id, remote: !!j.isRemote
+        posted: (j.publishedAt || "").slice(0, 10), id: j.id, remote: !!j.isRemote,
+        sal: (j.compensation && (j.compensation.compensationTierSummary || j.compensation.scrapeableCompensationSalarySummary)) || ""
       }));
     }
     if (b.src === "lever") {
@@ -521,11 +529,12 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
         seenTitles.add(tkey);
         const remote = j.remote || /remote/i.test(j.loc);
         const inCT = /connecticut|new haven|hartford|stamford|norwalk|\bct\b/i.test(j.loc);
+        const comp = parseComp(j.sal);
         out.push({
           id: "live-" + b.token + "-" + j.id, kind: "posting", status: "live", live: true,
           title: j.title, company: b.label, location: j.loc || (remote ? "Remote" : ""),
           workMode: remote ? "Remote" : "Hybrid", regions: inCT ? ["Connecticut"] : ["Remote"],
-          roleFamily: rolesFor(j.title), salary: "", salaryMin: null, salaryMax: null,
+          roleFamily: rolesFor(j.title), salary: comp.label, salaryMin: comp.min, salaryMax: comp.max,
           posted: j.posted || "", dateAdded: new Date().toISOString().slice(0, 10),
           source: b.src + " / " + b.label, applyUrl: j.url, altUrl: "",
           tags: ["Live feed", b.label, remote ? "Remote" : "Onsite/Hybrid"],
@@ -536,6 +545,19 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       return out;
     } catch (e) { return []; }
   }
+  // parse a comp string like "$120K – $150K" or "$120,000-$150,000" → {label,min,max}
+  function parseComp(str) {
+    if (!str) return { label: "", min: null, max: null };
+    const nums = [...String(str).matchAll(/\$?\s*([\d.,]+)\s*([kK])?/g)].map((m) => {
+      let n = parseFloat(m[1].replace(/,/g, "")); if (isNaN(n)) return 0;
+      if (m[2]) n *= 1000; else if (n < 1000) n *= 1000; return Math.round(n);
+    }).filter((n) => n >= 20000 && n <= 1000000);
+    if (!nums.length) return { label: String(str).trim(), min: null, max: null };
+    const min = Math.min(...nums), max = Math.max(...nums);
+    return { label: String(str).trim(), min, max: max > min ? max : min };
+  }
+  const normKey = (j) => (j.company + "|" + j.title).toLowerCase().replace(/\s+/g, " ").trim();
+
   let liveLoading = false;
   async function loadLive() {
     if (liveLoading) return;
@@ -545,7 +567,11 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     if (ind) ind.textContent = "⟳ refreshing live listings…";
     if (btn) { btn.disabled = true; btn.textContent = "⟳ Refreshing…"; }
     const results = await Promise.allSettled(LIVE_BOARDS.map(fetchBoard));
-    const live = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+    const raw = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+    // cross-source de-dup: drop live cards that duplicate a curated card or each other
+    const staticKeys = new Set((window.JOBS || []).map(normKey));
+    const seenLive = new Set(); const live = [];
+    for (const j of raw) { const k = normKey(j); if (staticKeys.has(k) || seenLive.has(k)) continue; seenLive.add(k); live.push(j); }
     ALL = ALL.filter((j) => !j.live).concat(live); // replace prior live cards, don't stack
     refreshFacets(); render();
     if (ind) ind.textContent = live.length ? `● ${live.length} live listings included` : "";
@@ -568,6 +594,23 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     bloomfield: [41.8265, -72.7401], "new britain": [41.6612, -72.7795], stamford: [41.0534, -73.5387],
     norwalk: [41.1177, -73.4082], wilton: [41.1954, -73.4379], ridgefield: [41.2815, -73.4982], groton: [41.3501, -72.0784]
   };
+  const GUILFORD = [41.2895, -72.6816];
+  function cityOf(j) {
+    if (!(j.regions || []).includes("Connecticut")) return null;
+    const l = (j.location || "").toLowerCase();
+    return Object.keys(CITY).find((c) => l.includes(c)) || null;
+  }
+  function haversineMi(a, b) {
+    const R = 3958.8, dLat = (b[0] - a[0]) * Math.PI / 180, dLng = (b[1] - a[1]) * Math.PI / 180;
+    const la1 = a[0] * Math.PI / 180, la2 = b[0] * Math.PI / 180;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function commuteInfo(j) {
+    const c = cityOf(j); if (!c || c === "guilford") return c === "guilford" ? { mi: 0, min: 0 } : null;
+    const mi = haversineMi(GUILFORD, CITY[c]);
+    return { mi: Math.round(mi), min: Math.round(mi * 1.5 + 5) }; // rough CT drive-time estimate
+  }
   let mapInited = false;
   function initMap() {
     if (mapInited || typeof L === "undefined") return;
@@ -708,6 +751,79 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     if (watchTerms.length) document.getElementById("watchlistBtn").classList.add("on");
   }
 
+  // ============================ card detail =================================
+  function openDetail(id) {
+    const j = ALL.find((x) => x.id === id); if (!j) return;
+    const ci = commuteInfo(j);
+    const rows = [
+      ["Company", j.company], ["Location", j.location], ["Work mode", j.workMode],
+      ["Salary", j.salary || "See posting"], ["Role family", (j.roleFamily || []).join(", ")],
+      ["Posted", j.posted || "—"], ["Added", j.dateAdded || "—"], ["Source", j.source || "—"],
+      ["Commute", ci ? (ci.mi > 0 ? `~${ci.mi} mi · ~${ci.min} min from Guilford` : "Guilford (home)") : "—"],
+      ["Fit score", "🎯 " + fitPct(j) + " (heuristic résumé match)"],
+      ["Your status", statusLabel(status[j.id]) || "—"]
+    ].map(([k, v]) => `<div class="dt-row"><span class="dt-k">${esc(k)}</span><span class="dt-v">${esc(v)}</span></div>`).join("");
+    const tags = (j.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join("");
+    const note = notes[j.id] ? `<div class="card-fit"><b>Your note:</b> ${esc(notes[j.id])}</div>` : "";
+    document.getElementById("detailTitle").textContent = j.title;
+    document.getElementById("detailBody").innerHTML = `
+      <div class="detail-grid">${rows}</div>
+      ${j.description ? `<p class="card-desc">${esc(j.description)}</p>` : ""}
+      ${j.fit ? `<div class="card-fit"><b>Why it fits:</b> ${esc(j.fit)}</div>` : ""}
+      ${note}
+      ${tags ? `<div class="tag-row">${tags}</div>` : ""}
+      <div class="card-foot">
+        <a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">Open ↗</a>
+        ${j.altUrl ? `<a class="btn ghost" href="${esc(j.altUrl)}" target="_blank" rel="noopener">Alt link</a>` : ""}
+      </div>`;
+    document.getElementById("detailModal").hidden = false;
+  }
+
+  // ============================ JD keyword-gap ==============================
+  const JD_STOP = new Set("the and for with that into our who all team work across both able have this from will plus etc not but per via year years experience role roles ability strong excellent including within while what when where which their them they out about over more most any can may also new help support build using use used skills skill years’".split(" "));
+  function jdAnalyze(text) {
+    const freq = {};
+    tokenize(text).forEach((t) => { if (!JD_STOP.has(t) && !STOP.has(t)) freq[t] = (freq[t] || 0) + 1; });
+    const ranked = Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 45);
+    return { have: ranked.filter((t) => resumeTokens.has(t)), gaps: ranked.filter((t) => !resumeTokens.has(t)).slice(0, 20) };
+  }
+
+  // ============================ Word download ===============================
+  function downloadDoc(filename, plainText) {
+    const body = plainText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
+    const html = `<html xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.4">${body}</body></html>`;
+    const blob = new Blob(["﻿" + html], { type: "application/msword" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  // ============================ filter presets ==============================
+  const loadPresets = () => JSON.parse(localStorage.getItem("jle_presets") || "[]");
+  const savePresets = (p) => localStorage.setItem("jle_presets", JSON.stringify(p));
+  function applyPreset(p) {
+    if (!p) return;
+    state.q = p.q || ""; document.getElementById("searchBox").value = state.q;
+    state.sort = p.sort || "new"; document.getElementById("sortBy").value = state.sort;
+    state.minSalary = p.minSalary || 0;
+    document.getElementById("salaryRange").value = state.minSalary;
+    document.getElementById("salaryReadout").textContent = state.minSalary > 0 ? "$" + Math.round(state.minSalary / 1000) + "k+" : "Any";
+    Object.keys(state.toggles).forEach((k) => (state.toggles[k] = !!(p.toggles && p.toggles[k])));
+    Object.keys(state.facets).forEach((k) => (state.facets[k] = new Set((p.facets && p.facets[k]) || [])));
+    document.querySelectorAll(".chip.toggle").forEach((c) => c.classList.toggle("active", !!state.toggles[c.dataset.toggle]));
+    refreshFacets(); render();
+  }
+  function renderPresets() {
+    const wrap = document.getElementById("presetChips"); if (!wrap) return;
+    const presets = loadPresets();
+    wrap.innerHTML = presets.length
+      ? presets.map((p, i) => `<span class="preset-chip"><button class="preset-apply" data-i="${i}">${esc(p.name)}</button><button class="preset-del" data-del="${i}" title="Delete preset">×</button></span>`).join("")
+      : `<span class="preset-empty">none saved yet</span>`;
+    wrap.querySelectorAll(".preset-apply").forEach((b) => b.addEventListener("click", () => applyPreset(loadPresets()[+b.dataset.i])));
+    wrap.querySelectorAll(".preset-del").forEach((b) => b.addEventListener("click", () => { const p = loadPresets(); p.splice(+b.dataset.del, 1); savePresets(p); renderPresets(); }));
+  }
+
   // ============================ wiring ======================================
   function init() {
     document.getElementById("tabs").addEventListener("click", (e) => {
@@ -763,6 +879,41 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       const ta = document.getElementById("outreachText");
       try { await navigator.clipboard.writeText(ta.value); document.getElementById("outreachCopy").textContent = "Copied ✓"; setTimeout(() => document.getElementById("outreachCopy").textContent = "Copy", 1500); }
       catch (e) { ta.select(); document.execCommand("copy"); }
+    });
+    document.getElementById("outreachDownload").addEventListener("click", () => {
+      const title = document.getElementById("outreachTitle").textContent.replace(/^Draft outreach — /, "").replace(/[^\w]+/g, "-").slice(0, 40);
+      downloadDoc("Cover-Letter-" + (title || "JLE") + ".doc", document.getElementById("outreachText").value);
+    });
+
+    // JD keyword-gap modal
+    const jdm = document.getElementById("jdModal");
+    document.getElementById("jdBtn").addEventListener("click", () => { jdm.hidden = false; });
+    document.getElementById("jdClose").addEventListener("click", () => { jdm.hidden = true; });
+    jdm.addEventListener("click", (e) => { if (e.target === jdm) jdm.hidden = true; });
+    document.getElementById("jdAnalyze").addEventListener("click", () => {
+      const txt = document.getElementById("jdText").value.trim();
+      const res = document.getElementById("jdResult");
+      if (!txt) { res.innerHTML = `<p class="jd-empty">Paste a job description above first.</p>`; return; }
+      const { have, gaps } = jdAnalyze(txt);
+      res.innerHTML =
+        `<div class="jd-block"><h3>✅ You already cover (${have.length})</h3><div class="tag-row">${have.map((t) => `<span class="tag jd-have">${esc(t)}</span>`).join("") || "<span class='jd-empty'>—</span>"}</div></div>` +
+        `<div class="jd-block"><h3>⚠ Gaps to address / weave in (${gaps.length})</h3><div class="tag-row">${gaps.map((t) => `<span class="tag jd-gap">${esc(t)}</span>`).join("") || "<span class='jd-empty'>none — strong match!</span>"}</div></div>` +
+        `<p class="jd-note">Heuristic keyword comparison vs. your résumé. Use the gaps to tailor a résumé variant or talking points — don't claim skills you don't have.</p>`;
+    });
+
+    // card detail modal
+    const dm = document.getElementById("detailModal");
+    document.getElementById("detailClose").addEventListener("click", () => { dm.hidden = true; });
+    dm.addEventListener("click", (e) => { if (e.target === dm) dm.hidden = true; });
+
+    // filter presets
+    renderPresets();
+    document.getElementById("savePresetBtn").addEventListener("click", () => {
+      const name = (prompt("Name this preset (e.g. 'Remote PO $130k+'):") || "").trim();
+      if (!name) return;
+      const p = loadPresets();
+      p.push({ name, q: state.q, sort: state.sort, minSalary: state.minSalary, toggles: { ...state.toggles }, facets: Object.fromEntries(Object.entries(state.facets).map(([k, v]) => [k, [...v]])) });
+      savePresets(p); renderPresets();
     });
 
     const stamp = "Data refreshed " + (window.JOBS_GENERATED || "—");

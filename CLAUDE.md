@@ -67,7 +67,14 @@ roleFamily values (exact strings): `Product Owner / PM`, `Instructional Design /
   the "🔄 Refresh live" button. Multi-source (`fetchRaw`): greenhouse, ashby, lever.
   Filtered by TITLE_RX / EXCLUDE_RX / locOK (word-boundary US) + per-board title dedup,
   cap 6/board. Live cards have `live:true`, `id` prefixed `live-`.
-- **Fit score:** heuristic résumé-keyword match (`rawFit`); "Best fit" sort.
+- **Fit score (v1.7+):** absolute heuristic in `app.js` (`scoreCard()`), driven entirely by
+  `assets/data/scoring-config.js` (`window.SCORING_CONFIG`: SCORING weights/FIT_TARGET/cap/
+  COVERAGE_BLEND/DISQUALIFIER_PENALTY/TIERS, ALIAS_MAP, BIGRAMS, CORE_COMPETENCIES,
+  DISQUALIFIERS, EXTRA_STOPWORDS — all owner-tunable, nothing hardcoded). Pipeline:
+  bigram detection → alias canonicalization → résumé+bio vocab overlap (weighted) →
+  coverage blend → disqualifier penalty → `round(blended/FIT_TARGET*100)` clamped [5,98].
+  Drawer shows a "Why this score" breakdown. "Best fit" sort uses blended raw.
+  Re-calibrate FIT_TARGET if résumé/bio/weights change. (Implements brief Phases 0–5.)
 - **Map:** Leaflet/OSM, CT cards plotted by `CITY` coords near Guilford.
 - **Résumé:** 4 variants (General/PO/Enablement/LIMS), each with a .docx download +
   "Save as PDF" (print). Per-card "Draft outreach" generator.

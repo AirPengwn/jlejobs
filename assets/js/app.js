@@ -117,29 +117,92 @@
     return d != null && d > 45;
   }
 
-  // ============================ fit score ===================================
-  const STOP = new Set("the and for with that into your you are role our who all team work across both able have this from will plus etc".split(" "));
-  function tokenize(s) { return (s || "").toLowerCase().match(/[a-z][a-z+#.]{2,}/g) || []; }
-  const resumeTokens = (() => {
-    const r = window.RESUME, set = new Set();
-    if (r) {
-      tokenize(r.title + " " + r.summary).forEach((t) => set.add(t));
-      (r.competencies || []).forEach((c) => { tokenize(c.group).forEach((t) => set.add(t)); c.items.forEach((i) => tokenize(i).forEach((t) => set.add(t))); });
-      (r.experience || []).forEach((e) => { tokenize(e.role).forEach((t) => set.add(t)); (e.bullets || []).forEach((b) => tokenize(b).forEach((t) => set.add(t))); });
+  // ============================ fit score (scoring-config.js driven) =========
+  // All tunable values live in window.SCORING_CONFIG; this is behavior only.
+  const CFG = window.SCORING_CONFIG || { SCORING: { FIT_TARGET: 18, DISPLAY_CAP: 98, DISPLAY_FLOOR: 5, WEIGHTS: { title: 3, roleFamily: 3, skillTags: 2, description: 1 }, COVERAGE_BLEND: 0, DISQUALIFIER_PENALTY: 1, TIERS: { teal: 85, neutral: 70 } }, ALIAS_MAP: {}, BIGRAMS: [], CORE_COMPETENCIES: [], DISQUALIFIERS: [], EXTRA_STOPWORDS: [] };
+  const SC = CFG.SCORING, W = SC.WEIGHTS;
+  const STOP = new Set("the and for with that into your you are our who all this from will plus etc a an of to in on at by or as is be we you’ll".split(" ").concat(CFG.EXTRA_STOPWORDS || []));
+  function tokenize(s) { return (String(s || "").toLowerCase().match(/[a-z][a-z0-9+&#./-]+/g) || []); }
+
+  // --- alias (Phase 2) + bigram (Phase 3) structures from config ---
+  const variantToCanon = new Map();
+  Object.entries(CFG.ALIAS_MAP).forEach(([canon, vars]) => { variantToCanon.set(canon.toLowerCase(), canon); (vars || []).forEach((v) => variantToCanon.set(String(v).toLowerCase(), canon)); });
+  const SINGLE = new Map(); const PHRASES = [];
+  variantToCanon.forEach((canon, variant) => { if (/\s/.test(variant)) PHRASES.push({ phrase: variant, canon }); else SINGLE.set(variant, canon); });
+  (CFG.BIGRAMS || []).forEach((bg) => { const p = String(bg).toLowerCase(); PHRASES.push({ phrase: p, canon: variantToCanon.get(p) || p }); });
+  PHRASES.sort((a, b) => b.phrase.length - a.phrase.length);
+  const wordAdj = (ch) => ch && /[a-z0-9]/.test(ch);
+
+  // text → Set of canonical tokens: detect phrases/bigrams first, then single words
+  function canonSet(text) {
+    const out = new Set();
+    let work = " " + String(text || "").toLowerCase().replace(/\s+/g, " ") + " ";
+    for (const { phrase, canon } of PHRASES) {
+      let i = work.indexOf(phrase);
+      while (i >= 0) {
+        if (!wordAdj(work[i - 1]) && !wordAdj(work[i + phrase.length])) { out.add(canon); work = work.slice(0, i) + " " + work.slice(i + phrase.length); i = work.indexOf(phrase); }
+        else { i = work.indexOf(phrase, i + 1); }
+      }
     }
-    STOP.forEach((t) => set.delete(t));
-    return set;
-  })();
-  function rawFit(j) {
-    let s = 0;
-    tokenize(j.title).forEach((t) => { if (resumeTokens.has(t)) s += 3; });
-    (j.roleFamily || []).forEach((r) => tokenize(r).forEach((t) => { if (resumeTokens.has(t)) s += 3; }));
-    (j.tags || []).forEach((g) => tokenize(g).forEach((t) => { if (resumeTokens.has(t)) s += 2; }));
-    tokenize(j.description + " " + (j.fit || "")).forEach((t) => { if (resumeTokens.has(t)) s += 1; });
-    return s;
+    for (const t of tokenize(work)) { if (STOP.has(t)) continue; const c = SINGLE.get(t) || t; if (!STOP.has(c)) out.add(c); }
+    return out;
   }
-  let fitMax = 1;
-  function fitPct(j) { return Math.max(5, Math.round((rawFit(j) / fitMax) * 100)); }
+
+  // --- vocabulary: résumé (full weight) + bio (Phase 4, ×1 only) ---
+  const _vocab = (parts) => { const s = new Set(); parts.forEach((p) => canonSet(p).forEach((t) => s.add(t))); return s; };
+  const RZ = window.RESUME || {}, BZ = window.BIO || {};
+  const resumeVocab = _vocab([RZ.title, RZ.summary,
+    ...((RZ.competencies || []).flatMap((c) => [c.group, ...(c.items || [])])),
+    ...((RZ.experience || []).flatMap((e) => [e.role, ...(e.bullets || [])]))]);
+  const bioVocab = _vocab([BZ.tagline, BZ.summary,
+    ...((BZ.experience || []).flatMap((e) => [e.role, ...(e.points || [])])),
+    ...((BZ.skills || []).flatMap((s) => s.items || [])),
+    ...((BZ.education || []).map((e) => e.deg))]);
+  const vocabAll = new Set([...resumeVocab, ...bioVocab]);
+
+  // --- disqualifiers (Phase 5b): whole-token / whole-phrase match only ---
+  // Single words match as whole tokens (so "k12" won't fire inside "non-k12",
+  // "director" won't fire in "directory"); multi-word terms match as phrases.
+  const DISQ_SINGLE = [], DISQ_PHRASE_RX = [];
+  (CFG.DISQUALIFIERS || []).forEach((d) => {
+    const dl = String(d).toLowerCase();
+    if (/\s/.test(dl)) {
+      const esc = dl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      try { DISQ_PHRASE_RX.push(new RegExp("(?<![a-z0-9])" + esc + "(?![a-z0-9])", "i")); } catch (e) { DISQ_PHRASE_RX.push(new RegExp("\\b" + esc + "\\b", "i")); }
+    } else { DISQ_SINGLE.push(dl); }
+  });
+  function hasDisqualifier(text) {
+    const l = String(text || "").toLowerCase();
+    const toks = new Set(tokenize(l));
+    if (DISQ_SINGLE.some((d) => toks.has(d))) return true;
+    return DISQ_PHRASE_RX.some((rx) => rx.test(l));
+  }
+
+  // --- absolute score (Phase 1) + coverage blend (Phase 5a), memoized ---
+  const _scoreCache = new Map();
+  function scoreCard(j) {
+    if (_scoreCache.has(j.id)) return _scoreCache.get(j.id);
+    const titleC = canonSet(j.title), roleC = canonSet((j.roleFamily || []).join(" ")),
+      tagC = canonSet((j.tags || []).join(" ")), descC = canonSet((j.description || "") + " " + (j.fit || ""));
+    let raw = 0; const matched = new Set();
+    const add = (set, fieldW) => set.forEach((t) => { if (resumeVocab.has(t)) { raw += fieldW; matched.add(t); } else if (bioVocab.has(t)) { raw += W.description; matched.add(t); } });
+    add(titleC, W.title); add(roleC, W.roleFamily); add(tagC, W.skillTags);
+    descC.forEach((t) => { if (resumeVocab.has(t) || bioVocab.has(t)) { raw += W.description; matched.add(t); } });
+    const cardAll = new Set([...titleC, ...roleC, ...tagC, ...descC]);
+    const core = CFG.CORE_COMPETENCIES || [];
+    const hitCore = core.filter((c) => cardAll.has(c));
+    const coverage = core.length ? hitCore.length / core.length : 0;
+    let blended = raw * (1 - SC.COVERAGE_BLEND + SC.COVERAGE_BLEND * coverage);
+    const disq = hasDisqualifier([j.title, (j.roleFamily || []).join(" "), j.description, (j.tags || []).join(" ")].join("  "));
+    if (disq) blended *= SC.DISQUALIFIER_PENALTY;
+    let displayed = Math.round((blended / SC.FIT_TARGET) * 100);
+    displayed = Math.max(SC.DISPLAY_FLOOR, Math.min(SC.DISPLAY_CAP, displayed));
+    const res = { displayed, raw, blended, coverage, hitCore, disq, matched: [...matched] };
+    _scoreCache.set(j.id, res);
+    return res;
+  }
+  function fitPct(j) { return scoreCard(j).displayed; }
+  function rawFit(j) { return scoreCard(j).blended; } // sort key
 
   // ============================ filter UI ===================================
   function countFor(key, val) {
@@ -224,11 +287,11 @@
     return "";
   }
   const shortLoc = (loc) => (loc || "").replace(/\s*\([^)]*\)\s*/g, "").split(/[/,]/)[0].trim() || (loc || "");
-  const tierClass = (p) => p >= 85 ? "tier-hi" : p >= 70 ? "tier-mid" : "tier-lo";
+  const tierClass = (p) => p >= SC.TIERS.teal ? "tier-hi" : p >= SC.TIERS.neutral ? "tier-mid" : "tier-lo";
 
   function cardHTML(j) {
     const st = status[j.id] || "", note = notes[j.id] || "";
-    const pct = fitPct(j), tier = tierClass(pct);
+    const sc = scoreCard(j), pct = sc.displayed, tier = tierClass(pct);
     const live = j.status === "live" || j.live;
     let typeText = j.kind === "company" ? "Company · watch" : j.kind === "search" ? "Search" : "Posting";
     if (j.kind === "posting") { if (j.status === "verified") typeText += " · verified"; else if (j.status === "snapshot") typeText += " · snapshot"; }
@@ -264,10 +327,22 @@
       ? `<a class="btn ghost dead" title="Primary link returned 404">⛔ Primary dead</a><a class="btn primary" href="${esc(j.altUrl || j.applyUrl)}" target="_blank" rel="noopener">Try alt link ↗</a>`
       : `<a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${primaryLabel} ↗</a>${j.altUrl ? `<a class="btn ghost" href="${esc(j.altUrl)}" target="_blank" rel="noopener">Alt link</a>` : ""}`;
     const allSkills = allTags.map((t) => `<span class="r-tag">${esc(t)}</span>`).join("");
+    const coreN = (CFG.CORE_COMPETENCIES || []).length;
+    const breakdown = `
+        <div>
+          <div class="rd-h">Why this score · ${pct}</div>
+          <div class="rd-bd">
+            <span class="rd-bd-i">🎯 <b>${sc.matched.length}</b> résumé/bio matches</span>
+            <span class="rd-bd-i">🧩 core coverage <b>${sc.hitCore.length}/${coreN}</b> (${Math.round(sc.coverage * 100)}%)</span>
+            ${sc.disq ? `<span class="rd-bd-i disq">⛔ disqualifier penalty ×${SC.DISQUALIFIER_PENALTY}</span>` : ""}
+          </div>
+          ${sc.hitCore.length ? `<div class="rd-bd-core">core hit: ${esc(sc.hitCore.join(" · "))}</div>` : ""}
+        </div>`;
     const drawer = `
       <div class="r-drawer">
         ${j.description ? `<div><div class="rd-h">Full description</div><p class="rd-p">${esc(j.description)}</p></div>` : ""}
         ${j.fit ? `<div><div class="rd-h">Why it fits</div><p class="rd-why">${esc(j.fit)}</p></div>` : ""}
+        ${breakdown}
         <div class="rd-grid">
           <div><span class="rd-k">Location</span><span class="rd-v">📍 ${esc(j.location || "—")}</span></div>
           <div><span class="rd-k">Work mode</span><span class="rd-v">🧭 ${esc(j.workMode || "—")}</span></div>
@@ -326,7 +401,6 @@
   }
 
   function render() {
-    fitMax = Math.max(1, ...ALL.map(rawFit));
     let list = sortJobs(ALL.filter(matches));
     if (watchTerms.length) { const w = list.filter(matchesWatch), r = list.filter((j) => !matchesWatch(j)); list = w.concat(r); }
     const cards = document.getElementById("cards");
@@ -874,10 +948,10 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
   // ============================ JD keyword-gap ==============================
   const JD_STOP = new Set("the and for with that into our who all team work across both able have this from will plus etc not but per via year years experience role roles ability strong excellent including within while what when where which their them they out about over more most any can may also new help support build using use used skills skill years’".split(" "));
   function jdAnalyze(text) {
-    const freq = {};
-    tokenize(text).forEach((t) => { if (!JD_STOP.has(t) && !STOP.has(t)) freq[t] = (freq[t] || 0) + 1; });
-    const ranked = Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 45);
-    return { have: ranked.filter((t) => resumeTokens.has(t)), gaps: ranked.filter((t) => !resumeTokens.has(t)).slice(0, 20) };
+    // canonicalize the JD (bigrams + aliases) then compare against the full
+    // résumé+bio vocabulary so synonyms count as covered, not gaps.
+    const canon = [...canonSet(text)].filter((t) => !JD_STOP.has(t) && !STOP.has(t));
+    return { have: canon.filter((t) => vocabAll.has(t)), gaps: canon.filter((t) => !vocabAll.has(t)).slice(0, 24) };
   }
 
   // ============================ Word download ===============================

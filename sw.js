@@ -1,7 +1,7 @@
 /* Service worker: network-first for same-origin GETs (fresh data when online,
    cached fallback when offline). Cross-origin requests (Leaflet, Greenhouse/Ashby,
    JSONBin) are left untouched so they behave normally. */
-const CACHE = "jle-cache-v1.6.4";
+const CACHE = "jle-cache-v1.7.0";
 const CORE = [
   "./", "./index.html",
   "./assets/css/styles.css", "./assets/js/app.js",

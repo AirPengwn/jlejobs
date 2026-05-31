@@ -3,6 +3,26 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.7.0 — 2026-05-30 — Fit-scoring overhaul (brief Phases 0–5)
+- **New `assets/data/scoring-config.js`** (window.SCORING_CONFIG) is the single source
+  of truth for all scoring values — weights, FIT_TARGET, cap/floor, coverage blend,
+  disqualifier penalty, tiers, alias map, bigrams, core competencies, disqualifiers,
+  stopwords. `app.js` reads everything from it; nothing hardcoded. Hand-tune there.
+- **Absolute scale (P1):** dropped relative `/max` normalization. `displayed =
+  round(blended / FIT_TARGET * 100)` clamped [5, 98]. A card's score now depends only
+  on the card + résumé/bio vocab, never on other cards. Calibrated FIT_TARGET=30 (top
+  match ~92, nothing at the cap, 95+ reserved).
+- **Synonyms (P2) + multi-word terms (P3):** card & vocab tokens normalize through the
+  alias map (Scrum≈Agile, RTE≈release train, LIMS≈lab informatics, etc.); bigrams
+  ("release train", "product owner"…) matched as single tokens first.
+- **Bio vocabulary (P4):** bio.js merged into the vocab at ×1 weight (broaden recall
+  without diluting title/role-family precision).
+- **Coverage + disqualifiers (P5):** score blends raw weight with how much of the core
+  competency set a card hits; exec/junior/K-12-teaching/helpdesk terms apply a ×0.5
+  penalty (whole-token match — "non-K12" no longer false-triggers "k12"). The details
+  drawer now shows a **"Why this score"** breakdown (matches, core coverage, penalty).
+- SW cache → jle-cache-v1.7.0. (Feature Phases 6–10 + IA still queued.)
+
 ## v1.6.4 — 2026-05-30
 - **Mobile "cards-first" (iPhone only):** on ≤640px screens the sort bar, Refine/More
   filters, and presets collapse behind a single **⚙ Filters & sort** toggle, so phones

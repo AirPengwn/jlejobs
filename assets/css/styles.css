@@ -713,3 +713,12 @@ body.compact .card-title { font-size: 14.5px; }
   body.m-filters-open .filters-bar { display: flex; }
   body.m-filters-open .presets-bar { display: flex; }
 }
+
+/* ============================================================================
+   v1.7 — score breakdown in the details drawer (Phase 5c)
+   ========================================================================== */
+.rd-bd { display: flex; flex-wrap: wrap; gap: 7px 14px; font-size: 12px; color: var(--text-dim); }
+.rd-bd-i { display: inline-flex; align-items: center; gap: 5px; }
+.rd-bd-i b { color: var(--text); font-weight: 700; }
+.rd-bd-i.disq { color: var(--n-coral); }
+.rd-bd-core { margin-top: 6px; font-size: 11px; color: var(--text-mute); line-height: 1.5; }

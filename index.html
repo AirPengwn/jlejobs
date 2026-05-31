@@ -33,8 +33,7 @@
       <button class="tab" data-view="pipeline">Pipeline</button>
       <button class="tab" data-view="map">Map</button>
       <button class="tab" data-view="grow">Grow</button>
-      <button class="tab" data-view="bio">Biography</button>
-      <button class="tab" data-view="resume">Résumé</button>
+      <button class="tab" data-view="me">Me</button>
     </nav>
   </header>
 
@@ -50,6 +49,7 @@
           <button class="chip toggle" data-toggle="starred">★ Starred</button>
           <button class="chip toggle" data-toggle="flagged">⚑ Flagged</button>
           <button class="chip toggle" data-toggle="hidden">🚫 Hidden</button>
+          <button class="chip toggle" data-toggle="snoozed">⏰ Snoozed</button>
         </div>
         <button class="chip m-filters-toggle" id="mFiltersToggle" type="button">⚙ Filters &amp; sort ▾</button>
         <div class="sort-wrap">
@@ -120,6 +120,14 @@
               <div class="filter-label">My status</div>
               <div class="filter-chips"></div>
             </div>
+            <div class="filter-group" id="filter-walkaway">
+              <div class="filter-label">Walk-away number <span class="filter-hint">flags, doesn't hide</span></div>
+              <div class="walkaway-row">
+                <span class="walkaway-prefix">$</span>
+                <input type="number" id="walkawayInput" min="0" step="5000" placeholder="e.g. 150000" />
+                <span class="walkaway-k" id="walkawayReadout"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -134,6 +142,8 @@
         <span id="resultCount"></span>
         <span id="liveIndicator" class="live-indicator"></span>
         <div class="results-actions">
+          <button class="linkbtn" id="trendsBtn" title="Aggregate market signals across the current cards">📊 Market signals</button>
+          <button class="linkbtn" id="journalBtn" title="A dated, append-only log of market observations">📓 Journal</button>
           <button class="linkbtn" id="refreshLiveBtn" title="Re-pull live company-board listings now (instant, in-browser)">🔄 Refresh live</button>
           <a class="linkbtn full-update" id="fullUpdateBtn"
              href="https://claude.ai/code/routines/trig_01BTfcqsKHc4VqTNhmUF9XRX"
@@ -143,6 +153,8 @@
           <button class="linkbtn" id="clearFiltersBtn">Clear filters</button>
         </div>
       </div>
+
+      <div id="marketPanel" class="market-panel" hidden></div>
 
       <div id="cards" class="cards-grid"></div>
       <div id="emptyState" class="empty-state" hidden>
@@ -171,14 +183,14 @@
       <div id="map"></div>
     </section>
 
-    <!-- ============================ BIO VIEW ========================= -->
-    <section id="view-bio" class="view">
+    <!-- ============================ ME VIEW (Bio + Résumé) =========== -->
+    <section id="view-me" class="view">
+      <div class="me-switch seg" id="meSwitch">
+        <button class="chip active" data-me="bio" type="button">Biography</button>
+        <button class="chip" data-me="resume" type="button">Résumé</button>
+      </div>
       <div id="bioContent" class="bio"></div>
-    </section>
-
-    <!-- ============================ RESUME VIEW ====================== -->
-    <section id="view-resume" class="view">
-      <div id="resumeContent" class="bio"></div>
+      <div id="resumeContent" class="bio" hidden></div>
     </section>
   </main>
 
@@ -275,6 +287,22 @@
         <button class="btn ghost" id="watchClear">Clear all</button>
       </div>
       <div class="sync-status" id="watchStatus"></div>
+    </div>
+  </div>
+
+  <!-- ============================ JOURNAL MODAL ===================== -->
+  <div id="journalModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h2>📓 Market journal</h2>
+        <button class="icon-btn" id="journalClose" title="Close">✕</button>
+      </div>
+      <p class="modal-note">A dated, append-only log for market observations — no structure beyond date + line. Synced across your devices. ⌘/Ctrl+Enter to add.</p>
+      <div class="journal-add">
+        <input type="text" id="journalInput" placeholder="e.g. RTE roles hot this month; Cresta keeps reposting" autocomplete="off" />
+        <button class="btn primary" id="journalAdd">Add</button>
+      </div>
+      <div id="journalList" class="journal-list"></div>
     </div>
   </div>
 

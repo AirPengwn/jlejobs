@@ -9,7 +9,9 @@
   const LS = {
     starred: "jle_starred", flagged: "jle_flagged", seen: "jle_seen",
     hidden: "jle_hidden", status: "jle_status", notes: "jle_notes",
-    density: "jle_density", watch: "jle_watch", visited: "jle_visited"
+    density: "jle_density", watch: "jle_watch", visited: "jle_visited",
+    snooze: "jle_snooze", journal: "jle_journal", walkaway: "jle_walkaway",
+    marketHist: "jle_market_hist", lastVisit: "jle_last_visit", decayInit: "jle_decay_init"
   };
 
   const loadSet = (k) => new Set(JSON.parse(localStorage.getItem(k) || "[]"));
@@ -23,7 +25,12 @@
   const hidden  = loadSet(LS.hidden);
   let   status  = loadMap(LS.status); // {id: statusKey}
   let   notes   = loadMap(LS.notes);  // {id: text}
+  let   snooze  = loadMap(LS.snooze); // {id: untilISO} — Phase 10d
+  let   journal = JSON.parse(localStorage.getItem(LS.journal) || "[]"); // [{date,text}] — Phase 10e
   let   watchTerms = JSON.parse(localStorage.getItem(LS.watch) || "[]"); // [lowercase terms]
+  let   walkaway = +(localStorage.getItem(LS.walkaway) || 0); // Phase 10a personal "worth a look" salary
+  const nowISO = () => new Date().toISOString();
+  const isSnoozed = (id) => { const u = snooze[id]; return u && u > nowISO(); };
   const matchesWatch = (j) => {
     if (!watchTerms.length) return false;
     const hay = [j.title, j.company, (j.tags || []).join(" "), (j.roleFamily || []).join(" "), j.description, j.fit].join(" ").toLowerCase();
@@ -73,13 +80,16 @@
     if (Array.isArray(rec.seen)) rec.seen.forEach((x) => seen.add(x));
     if (rec.status && typeof rec.status === "object") status = rec.status;
     if (rec.notes && typeof rec.notes === "object") notes = rec.notes;
+    if (rec.snooze && typeof rec.snooze === "object") snooze = rec.snooze;
+    if (Array.isArray(rec.journal)) journal = rec.journal;
     saveSet(LS.starred, starred); saveSet(LS.flagged, flagged); saveSet(LS.hidden, hidden);
     saveSet(LS.seen, seen); saveMap(LS.status, status); saveMap(LS.notes, notes);
+    saveMap(LS.snooze, snooze); localStorage.setItem(LS.journal, JSON.stringify(journal));
     return true;
   }
   async function syncPush() {
     if (!sync.on()) return false;
-    const body = JSON.stringify({ starred: [...starred], flagged: [...flagged], seen: [...seen], hidden: [...hidden], status, notes });
+    const body = JSON.stringify({ starred: [...starred], flagged: [...flagged], seen: [...seen], hidden: [...hidden], status, notes, snooze, journal });
     const res = await fetch("https://api.jsonbin.io/v3/b/" + encodeURIComponent(sync.cfg.binId), { method: "PUT", headers: sync.headers(), body });
     if (!res.ok) throw new Error("Push failed (HTTP " + res.status + ")");
     return true;
@@ -97,12 +107,34 @@
 
   const state = {
     q: "", sort: "new", minSalary: 0, minFit: 0,
-    toggles: { new: false, starred: false, flagged: false, hidden: false },
+    toggles: { new: false, starred: false, flagged: false, hidden: false, snoozed: false },
     facets: { roleFamily: new Set(), regions: new Set(), workMode: new Set(), kind: new Set(), status: new Set(), skills: new Set() }
   };
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const isNew = (j) => !seen.has(j.id);
+
+  // ===================== "New" decay (Phase 6) ==============================
+  // "New" means new SINCE LAST VISIT, not new ever. Snapshot the unseen ids once
+  // at load (stable green for the session) then mark them seen so the kicker
+  // decays next visit. The first run after this feature ships marks everything
+  // seen silently — so the owner doesn't get a one-time green wall.
+  let newThisVisit = new Set();
+  let resurfacedThisVisit = new Set(); // Phase 10d — snoozes that elapsed since last visit
+  let firstDecayRun = false;           // true on the first-ever load of the decay feature
+  const isNew = (j) => newThisVisit.has(j.id);
+  // Move elapsed snoozes back into view as an event, then clear them from the map.
+  function processResurface() {
+    let changed = false;
+    Object.keys(snooze).forEach((id) => {
+      if (snooze[id] && snooze[id] <= nowISO()) { resurfacedThisVisit.add(id); newThisVisit.add(id); delete snooze[id]; changed = true; }
+    });
+    if (changed) { saveMap(LS.snooze, snooze); scheduleSync(); }
+  }
+  function noteSeen(jobs, silent) {
+    let changed = false;
+    jobs.forEach((j) => { if (!seen.has(j.id)) { if (!silent) newThisVisit.add(j.id); seen.add(j.id); changed = true; } });
+    if (changed) saveSet(LS.seen, seen); // persist locally; rides along on next sync push
+  }
   const kindLabel = { posting: "Posting", search: "Saved search", company: "Company watch" };
 
   // days since an ISO date (for expiry flags); null-safe
@@ -115,6 +147,19 @@
     if (j.kind !== "posting" || j.live) return false;
     const d = daysSince(j.posted || j.dateAdded);
     return d != null && d > 45;
+  }
+  // Phase 7: always-on, muted relative age ("5 weeks ago"). Distinct from the
+  // coral may-expire exception strip.
+  function relAge(iso) {
+    const d = daysSince(iso); if (d == null) return "";
+    if (d <= 0) return "today";
+    if (d === 1) return "yesterday";
+    if (d < 7) return d + " days ago";
+    if (d < 14) return "1 week ago";
+    if (d < 45) return Math.round(d / 7) + " weeks ago";
+    if (d < 60) return "1 month ago";
+    if (d < 365) return Math.round(d / 30) + " months ago";
+    const y = (d / 365); return (y < 1.5 ? "1 year" : Math.round(y) + " years") + " ago";
   }
 
   // ============================ fit score (scoring-config.js driven) =========
@@ -252,6 +297,8 @@
     }
     if (state.toggles.hidden) { if (!hidden.has(j.id)) return false; }
     else if (hidden.has(j.id)) return false;
+    if (!state.toggles.snoozed && isSnoozed(j.id)) return false; // Phase 10d
+    else if (state.toggles.snoozed && !isSnoozed(j.id)) return false;
     if (state.toggles.new && !isNew(j)) return false;
     if (state.toggles.starred && !starred.has(j.id)) return false;
     if (state.toggles.flagged && !flagged.has(j.id)) return false;
@@ -289,13 +336,20 @@
   const shortLoc = (loc) => (loc || "").replace(/\s*\([^)]*\)\s*/g, "").split(/[/,]/)[0].trim() || (loc || "");
   const tierClass = (p) => p >= SC.TIERS.teal ? "tier-hi" : p >= SC.TIERS.neutral ? "tier-mid" : "tier-lo";
 
+  let _watchedCos = new Set(); // Phase 10c — companies with at least one starred card
+  function refreshWatchedCos() { _watchedCos = new Set(ALL.filter((j) => starred.has(j.id)).map((j) => (j.company || "").toLowerCase())); }
+
   function cardHTML(j) {
     const st = status[j.id] || "", note = notes[j.id] || "";
     const sc = scoreCard(j), pct = sc.displayed, tier = tierClass(pct);
     const live = j.status === "live" || j.live;
+    const topSal = j.salaryMax || j.salaryMin || 0;
+    const walkOK = walkaway > 0 && topSal >= walkaway;                                   // Phase 10a
+    const watchedCoNew = isNew(j) && !starred.has(j.id) && _watchedCos.has((j.company || "").toLowerCase()); // Phase 10c
+    const resurfaced = resurfacedThisVisit.has(j.id);                                    // Phase 10d
     let typeText = j.kind === "company" ? "Company · watch" : j.kind === "search" ? "Search" : "Posting";
     if (j.kind === "posting") { if (j.status === "verified") typeText += " · verified"; else if (j.status === "snapshot") typeText += " · snapshot"; }
-    const kicker = `<div class="r-kicker">${isNew(j) ? `<span class="r-new">New</span>` : ""}${live ? `<span class="r-live">Live</span>` : ""}<span class="r-type">${esc(typeText)}</span></div>`;
+    const kicker = `<div class="r-kicker">${isNew(j) ? `<span class="r-new">New</span>` : ""}${resurfaced ? `<span class="r-resurfaced">⏰ Resurfaced</span>` : ""}${live ? `<span class="r-live">Live</span>` : ""}${watchedCoNew ? `<span class="r-watchco">★ watched co</span>` : ""}${walkOK ? `<span class="r-walk" title="Clears your walk-away number ($${Math.round(walkaway / 1000)}k)">✓ your #</span>` : ""}<span class="r-type">${esc(typeText)}</span></div>`;
 
     const csal = compactSal(j);
     const sub = `<div class="r-sub"><span class="co">${esc(j.company)}</span>${j.location ? ` · ${esc(shortLoc(j.location))}` : ""}${csal ? ` · <span class="sal">${esc(csal)}</span>` : ""}</div>`;
@@ -313,12 +367,14 @@
     const alert = dead ? `<div class="r-alert">⛔ Apply link returned 404 — try the alt link</div>`
       : exp ? `<div class="r-alert">⚠ Snapshot — verify it's still live</div>` : "";
 
-    const footDate = shortDate(j.posted) || (live ? "Live feed" : j.kind === "company" ? "Watch" : "");
-    const footMeta = `<span class="m">🧭 ${esc(j.workMode || "")}</span>${footDate ? `<span class="m">${esc(footDate)}</span>` : ""}`;
+    // Phase 7: muted relative age on the foot (absolute date stays in the drawer).
+    const age = live ? "Live feed" : j.kind === "company" ? "Watch" : relAge(j.posted || j.dateAdded);
+    const footMeta = `<span class="m">🧭 ${esc(j.workMode || "")}</span>${age ? `<span class="m age" title="${esc(j.posted || j.dateAdded || "")}">${esc(age)}</span>` : ""}`;
 
     // drawer — the full record, nothing lost
     const ci = commuteInfo(j);
-    const commuteStr = ci ? (ci.mi > 0 ? `🚗 ~${ci.mi} mi · ~${ci.min} min` : "🚗 Guilford (home)") : "🚗 n/a (remote)";
+    // Phase 7: only show commute for roles with a real CT location — never "n/a"/"0 mi" for Remote.
+    const commuteRow = ci ? `<div><span class="rd-k">Commute</span><span class="rd-v">${ci.mi > 0 ? `🚗 ~${ci.mi} mi · ~${ci.min} min` : "🚗 Guilford (home)"}</span></div>` : "";
     const linkStr = j.linkStatus ? `${j.linkStatus === "dead" ? "⛔ dead" : "✓ " + esc(j.linkStatus)}${j.linkChecked ? " · " + esc(j.linkChecked) : ""}` : "—";
     const role = (j.roleFamily || []).join(" · ");
     const statusOpts = `<option value="">— set status —</option>` + STATUS.map((s) => `<option value="${s.key}"${s.key === st ? " selected" : ""}>${esc(s.label)}</option>`).join("");
@@ -346,7 +402,7 @@
         <div class="rd-grid">
           <div><span class="rd-k">Location</span><span class="rd-v">📍 ${esc(j.location || "—")}</span></div>
           <div><span class="rd-k">Work mode</span><span class="rd-v">🧭 ${esc(j.workMode || "—")}</span></div>
-          <div><span class="rd-k">Commute</span><span class="rd-v">${commuteStr}</span></div>
+          ${commuteRow}
           <div><span class="rd-k">Salary</span><span class="rd-v">💰 ${esc(j.salary || "see posting")}</span></div>
           <div><span class="rd-k">Posted</span><span class="rd-v">📅 ${esc(j.posted || (live ? "Live — never stale" : "—"))}</span></div>
           <div><span class="rd-k">Role family</span><span class="rd-v">🗂 ${esc(role || "—")}</span></div>
@@ -357,6 +413,9 @@
         <div class="rd-controls">
           <select class="status-select" data-act="status">${statusOpts}</select>
           <button class="rd-mini" data-act="outreach" type="button">✍ Draft outreach</button>
+          ${isSnoozed(j.id)
+            ? `<span class="rd-snoozed" title="Resurfaces on this date">⏰ snoozed → ${esc((snooze[j.id] || "").slice(0, 10))}</span><button class="rd-mini" data-act="unsnooze" type="button">Unsnooze</button>`
+            : `<button class="rd-mini" data-act="snooze" data-days="7" type="button">⏰ 1 wk</button><button class="rd-mini" data-act="snooze" data-days="30" type="button">⏰ 1 mo</button>`}
         </div>
         <div><div class="rd-h">Private note</div><textarea class="rd-note" placeholder="Synced across your devices…">${esc(note)}</textarea></div>
         <div class="rd-foot">${foot}</div>
@@ -401,6 +460,7 @@
   }
 
   function render() {
+    refreshWatchedCos();
     let list = sortJobs(ALL.filter(matches));
     if (watchTerms.length) { const w = list.filter(matchesWatch), r = list.filter((j) => !matchesWatch(j)); list = w.concat(r); }
     const cards = document.getElementById("cards");
@@ -476,6 +536,22 @@
     });
     cards.querySelectorAll('[data-act="outreach"]').forEach((b) => {
       b.addEventListener("click", (e) => { e.stopPropagation(); openOutreach(b.closest(".card").dataset.id); });
+    });
+    // Phase 10d: snooze / unsnooze
+    cards.querySelectorAll('[data-act="snooze"]').forEach((b) => {
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = b.closest(".card").dataset.id, days = +b.dataset.days;
+        const until = new Date(Date.now() + days * 86400000).toISOString();
+        snooze[id] = until; saveMap(LS.snooze, snooze); scheduleSync(); render();
+      });
+    });
+    cards.querySelectorAll('[data-act="unsnooze"]').forEach((b) => {
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = b.closest(".card").dataset.id;
+        delete snooze[id]; saveMap(LS.snooze, snooze); scheduleSync(); render();
+      });
     });
   }
 
@@ -713,7 +789,11 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     const seenLive = new Set(); const live = [];
     for (const j of raw) { const k = normKey(j); if (staticKeys.has(k) || seenLive.has(k)) continue; seenLive.add(k); live.push(j); }
     ALL = ALL.filter((j) => !j.live).concat(live); // replace prior live cards, don't stack
+    noteSeen(live, firstDecayRun); // silence the first live batch too on the very first run
+    firstDecayRun = false;         // subsequent refreshes surface genuinely-new live cards
+    recordMarketSnapshot(); // include freshly-pulled live cards in the snapshot
     refreshFacets(); render();
+    const mp = document.getElementById("marketPanel"); if (mp && !mp.hidden) renderMarket();
     if (ind) ind.textContent = live.length ? `● ${live.length} live listings included` : "";
     if (btn) { btn.disabled = false; btn.textContent = "🔄 Refresh live"; }
     liveLoading = false;
@@ -819,8 +899,18 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
         </div>`).join("");
       return `<div class="grow-group"><h2>${esc(grp.title)}</h2>${grp.note ? `<p class="grow-note">${esc(grp.note)}</p>` : ""}<div class="grow-grid">${cards}</div></div>`;
     }).join("");
+    // Phase 9: aggregated skill-gap from strong-fit roles, surfaced atop Grow.
+    const gaps = skillGaps(12);
+    const gapPanel = `
+      <div class="gap-panel">
+        <h2>🎯 Skills the market wants that you don't list</h2>
+        <p class="grow-note">Aggregated from your strong-fit roles (${SC.TIERS.neutral}+). These appear often in roles that match you but aren't in your résumé/bio vocabulary — prioritize the PD below accordingly.</p>
+        ${gaps.length
+          ? `<div class="gap-chips">${gaps.map((g2) => `<span class="gap-chip">${esc(g2.skill)} <b>${g2.count}</b></span>`).join("")}</div>`
+          : `<p class="jd-empty">No notable gaps right now — your vocabulary covers the strong-fit roles. 👌</p>`}
+      </div>`;
     document.getElementById("growContent").innerHTML =
-      `<div class="grow-intro">${esc(g.intro)}</div>${groups}
+      `<div class="grow-intro">${esc(g.intro)}</div>${gapPanel}${groups}
        <p class="resume-foot-note">Costs and links are approximate (mid-2026) — confirm on each provider's site. You already hold Certified SAFe Product Owner / Product Manager (POPM).</p>`;
   }
 
@@ -883,12 +973,27 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
   }
 
   // ============================ digest + watchlist ==========================
+  // Phase 10b: graceful dormancy — a concise multi-line digest on return, not a
+  // wall of green. Summarizes new, resurfaced, watched-company activity, and
+  // salary/skill movement from the stored market history.
   function updateDigest() {
     const banner = document.getElementById("digestBanner"); if (!banner) return;
     const visited = localStorage.getItem(LS.visited);
-    const newCount = ALL.filter(isNew).length;
-    if (visited && newCount > 0) {
-      document.getElementById("digestText").textContent = `🟢 ${newCount} new opportunit${newCount === 1 ? "y" : "ies"} since your last visit.`;
+    const newCount = newThisVisit.size;
+    const lines = [];
+    if (newCount) lines.push(`🟢 <b>${newCount}</b> new since your last visit`);
+    if (resurfacedThisVisit.size) lines.push(`⏰ <b>${resurfacedThisVisit.size}</b> snoozed role${resurfacedThisVisit.size > 1 ? "s" : ""} resurfaced`);
+    const watchedNew = ALL.filter((j) => isNew(j) && !starred.has(j.id) && _watchedCos.has((j.company || "").toLowerCase()));
+    if (watchedNew.length) lines.push(`★ <b>${watchedNew.length}</b> new from companies you star (${esc([...new Set(watchedNew.map((j) => j.company))].slice(0, 3).join(", "))})`);
+    const hist = loadMarketHist(), cur = hist[hist.length - 1], curM = cur && cur.date.slice(0, 7);
+    const prev = cur ? hist.filter((h) => h.date.slice(0, 7) < curM).slice(-1)[0] : null;
+    if (cur && prev && prev.median) { const c = Math.round((cur.median - prev.median) / prev.median * 100); if (Math.abs(c) >= 2) lines.push(`💰 median salary ${c > 0 ? "up" : "down"} <b>${Math.abs(c)}%</b> vs last month`); }
+    if (cur && prev) {
+      const top = Object.keys(cur.skillFreq).map((k) => ({ k, d: cur.skillFreq[k] - ((prev.skillFreq[k]) || 0) })).filter((s) => s.d > 0).sort((a, b) => b.d - a.d)[0];
+      if (top && top.d >= 2) lines.push(`📈 "${esc(top.k)}" rising in demand`);
+    }
+    if (visited && lines.length) {
+      document.getElementById("digestText").innerHTML = lines.slice(0, 5).map((l) => `<span class="dg-line">${l}</span>`).join("");
       banner.hidden = false;
     } else { banner.hidden = true; }
     localStorage.setItem(LS.visited, "1");
@@ -917,6 +1022,138 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     if (watchTerms.length) document.getElementById("watchlistBtn").classList.add("on");
   }
 
+  // ============================ Me tab switch (IA) ==========================
+  function initMeSwitch() {
+    const sw = document.getElementById("meSwitch"); if (!sw) return;
+    sw.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-me]"); if (!b) return;
+      sw.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b));
+      const me = b.dataset.me;
+      document.getElementById("bioContent").hidden = me !== "bio";
+      document.getElementById("resumeContent").hidden = me !== "resume";
+    });
+  }
+
+  // ============================ Journal (Phase 10e) =========================
+  function initJournalUI() {
+    const modal = document.getElementById("journalModal"); if (!modal) return;
+    const list = document.getElementById("journalList"), input = document.getElementById("journalInput");
+    const draw = () => {
+      list.innerHTML = journal.length
+        ? journal.slice().reverse().map((e, i) => `<div class="jrnl-entry"><span class="jrnl-date">${esc(e.date)}</span><span class="jrnl-text">${esc(e.text)}</span><button class="jrnl-del" data-del="${journal.length - 1 - i}" title="Delete">×</button></div>`).join("")
+        : `<p class="jd-empty">No entries yet. Jot a market observation — "RTE roles hot this month."</p>`;
+      list.querySelectorAll(".jrnl-del").forEach((b) => b.addEventListener("click", () => {
+        journal.splice(+b.dataset.del, 1); localStorage.setItem(LS.journal, JSON.stringify(journal)); scheduleSync(); draw();
+      }));
+    };
+    const open = () => { draw(); modal.hidden = false; setTimeout(() => input.focus(), 50); };
+    document.getElementById("journalBtn").addEventListener("click", open);
+    document.getElementById("journalClose").addEventListener("click", () => { modal.hidden = true; });
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.hidden = true; });
+    const add = () => {
+      const t = input.value.trim(); if (!t) return;
+      journal.push({ date: nowISO().slice(0, 10), text: t });
+      localStorage.setItem(LS.journal, JSON.stringify(journal)); scheduleSync();
+      input.value = ""; draw();
+    };
+    document.getElementById("journalAdd").addEventListener("click", add);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) add(); });
+  }
+
+  // ============================ Market signals (Phase 8) ====================
+  // Location/geography tokens are not skills — keep them out of trends & gaps.
+  let _locStop = null;
+  function locStop() {
+    if (_locStop) return _locStop;
+    _locStop = new Set(["ct", "connecticut", "remote", "hybrid", "onsite", "on-site", "usa", "us", "anywhere", "nationwide", "guilford", "new", "haven", "area", "county", "metro"]);
+    Object.keys(CITY).forEach((c) => c.split(/\s+/).forEach((w) => _locStop.add(w)));
+    return _locStop;
+  }
+  const salaryTop = (j) => j.salaryMax || j.salaryMin || 0;
+  function median(nums) { if (!nums.length) return 0; const s = nums.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); }
+  function workModeMix() {
+    const wm = { Remote: 0, Hybrid: 0, Onsite: 0 };
+    ALL.forEach((j) => { const m = (j.workMode || "").toLowerCase(); if (/remote/.test(m)) wm.Remote++; else if (/hybrid/.test(m)) wm.Hybrid++; else if (/onsite|on-site|in-?office/.test(m)) wm.Onsite++; });
+    return wm;
+  }
+  function skillFreqAll() {
+    const freq = {};
+    ALL.forEach((j) => { const set = new Set(); (j.tags || []).forEach((t) => canonSet(t).forEach((c) => set.add(c))); set.forEach((c) => { if (STOP.has(c) || SKILL_STOP.has(c) || locStop().has(c)) return; freq[c] = (freq[c] || 0) + 1; }); });
+    return freq;
+  }
+  function computeMarketSnapshot() {
+    return { date: nowISO().slice(0, 10), median: median(ALL.filter((j) => salaryTop(j) > 0).map(salaryTop)), skillFreq: skillFreqAll(), workMode: workModeMix(), n: ALL.length };
+  }
+  const loadMarketHist = () => JSON.parse(localStorage.getItem(LS.marketHist) || "[]");
+  function recordMarketSnapshot() {
+    const hist = loadMarketHist(), snap = computeMarketSnapshot(), last = hist[hist.length - 1];
+    if (last && last.date.slice(0, 7) === snap.date.slice(0, 7)) hist[hist.length - 1] = snap; // refresh current month
+    else hist.push(snap);
+    if (hist.length > 24) hist.splice(0, hist.length - 24);
+    localStorage.setItem(LS.marketHist, JSON.stringify(hist));
+    return hist;
+  }
+  function trendArrow(cur, prev, goodUp) {
+    if (prev == null || !prev) return `<span class="trend new">new</span>`;
+    const c = (cur - prev) / prev * 100;
+    if (Math.abs(c) < 1) return `<span class="trend flat">→ flat</span>`;
+    const up = c > 0, good = goodUp ? up : !up;
+    return `<span class="trend ${good ? "up" : "down"}">${up ? "▲" : "▼"} ${Math.abs(Math.round(c))}%</span>`;
+  }
+  function renderMarket() {
+    const el = document.getElementById("marketPanel"); if (!el) return;
+    const cur = computeMarketSnapshot();
+    const hist = loadMarketHist(), curM = cur.date.slice(0, 7);
+    const priors = hist.filter((h) => h.date.slice(0, 7) < curM);
+    const prev = priors.length ? priors[priors.length - 1] : null;
+    const salStr = cur.median ? "$" + Math.round(cur.median / 1000) + "k" : "—";
+    // rising / falling skills
+    const keys = Object.keys(cur.skillFreq).filter((k) => cur.skillFreq[k] >= 2);
+    const scored = keys.map((k) => ({ k, now: cur.skillFreq[k], was: (prev && prev.skillFreq[k]) || 0 }));
+    if (prev) scored.sort((a, b) => (b.now - b.was) - (a.now - a.was) || b.now - a.now);
+    else scored.sort((a, b) => b.now - a.now);
+    const rising = scored.slice(0, 6);
+    const falling = prev ? scored.filter((s) => s.now - s.was < 0).sort((a, b) => (a.now - a.was) - (b.now - b.was)).slice(0, 4) : [];
+    const wm = cur.workMode, wmTot = Math.max(1, wm.Remote + wm.Hybrid + wm.Onsite);
+    const pct = (n) => Math.round(n / wmTot * 100);
+    const skillChip = (s) => `<span class="mk-skill">${esc(s.k)} <b>${s.now}</b>${prev ? ` <span class="mk-delta ${s.now - s.was > 0 ? "up" : s.now - s.was < 0 ? "down" : "flat"}">${s.now - s.was > 0 ? "+" : ""}${s.now - s.was || "="}</span>` : ""}</span>`;
+    el.innerHTML = `
+      <div class="mk-head"><h3>📊 Market signals</h3><span class="mk-sub">across ${cur.n} tracked cards${prev ? ` · vs ${prev.date.slice(0, 7)}` : " · first snapshot (trends build over time)"}</span></div>
+      <div class="mk-grid">
+        <div class="mk-block">
+          <div class="mk-k">Median salary</div>
+          <div class="mk-v">${salStr} ${trendArrow(cur.median, prev && prev.median, true)}</div>
+        </div>
+        <div class="mk-block">
+          <div class="mk-k">Work mode mix</div>
+          <div class="mk-bars">
+            <div class="mk-bar-row"><span>Remote</span><span class="mk-bar"><i style="width:${pct(wm.Remote)}%"></i></span><span class="mk-n">${pct(wm.Remote)}%</span></div>
+            <div class="mk-bar-row"><span>Hybrid</span><span class="mk-bar"><i style="width:${pct(wm.Hybrid)}%"></i></span><span class="mk-n">${pct(wm.Hybrid)}%</span></div>
+            <div class="mk-bar-row"><span>Onsite</span><span class="mk-bar"><i style="width:${pct(wm.Onsite)}%"></i></span><span class="mk-n">${pct(wm.Onsite)}%</span></div>
+          </div>
+        </div>
+        <div class="mk-block mk-wide">
+          <div class="mk-k">${prev ? "Skills rising" : "Most-required skills"}</div>
+          <div class="mk-skills">${rising.map(skillChip).join("") || "<span class='jd-empty'>—</span>"}</div>
+          ${falling.length ? `<div class="mk-k mk-k2">Skills cooling</div><div class="mk-skills">${falling.map(skillChip).join("")}</div>` : ""}
+        </div>
+      </div>
+      <p class="mk-foot">Read-only aggregate over the current card set. A monthly snapshot is stored locally so trends accrue with each refresh.</p>`;
+  }
+
+  // ============================ Skill-gap → Grow (Phase 9) ==================
+  // Skills frequent in strong-fit roles (≥ neutral tier) but absent from the
+  // résumé/bio vocabulary after alias normalization — ranked, feeds the Grow tab.
+  function skillGaps(n) {
+    const strong = ALL.filter((j) => fitPct(j) >= SC.TIERS.neutral);
+    const freq = {};
+    strong.forEach((j) => {
+      const set = canonSet([j.title, (j.roleFamily || []).join(" "), (j.tags || []).join(" ")].join("  "));
+      set.forEach((c) => { if (vocabAll.has(c) || STOP.has(c) || SKILL_STOP.has(c) || locStop().has(c)) return; freq[c] = (freq[c] || 0) + 1; });
+    });
+    return Object.entries(freq).filter(([, v]) => v >= 2).sort((a, b) => b[1] - a[1]).slice(0, n || 12).map(([skill, count]) => ({ skill, count }));
+  }
+
   // ============================ card detail =================================
   function openDetail(id) {
     const j = ALL.find((x) => x.id === id); if (!j) return;
@@ -924,8 +1161,10 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     const rows = [
       ["Company", j.company], ["Location", j.location], ["Work mode", j.workMode],
       ["Salary", j.salary || "See posting"], ["Role family", (j.roleFamily || []).join(", ")],
-      ["Posted", j.posted || "—"], ["Added", j.dateAdded || "—"], ["Source", j.source || "—"],
-      ["Commute", ci ? (ci.mi > 0 ? `~${ci.mi} mi · ~${ci.min} min from Guilford` : "Guilford (home)") : "—"],
+      ["Posted", (j.posted || "—") + (relAge(j.posted || j.dateAdded) ? ` · ${relAge(j.posted || j.dateAdded)}` : "")],
+      ["Added", j.dateAdded || "—"], ["Source", j.source || "—"],
+      // Phase 7: commute only for real CT locations (omit entirely for Remote).
+      ...(ci ? [["Commute", ci.mi > 0 ? `~${ci.mi} mi · ~${ci.min} min from Guilford` : "Guilford (home)"]] : []),
       ["Fit score", "🎯 " + fitPct(j) + " (heuristic résumé match)"],
       ["Your status", statusLabel(status[j.id]) || "—"]
     ].map(([k, v]) => `<div class="dt-row"><span class="dt-k">${esc(k)}</span><span class="dt-v">${esc(v)}</span></div>`).join("");
@@ -1002,6 +1241,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       if (view === "map") setTimeout(initMap, 60);
       if (view === "pipeline") renderPipeline();
       if (view === "grow") renderGrow();
+      if (view === "me") { renderBio(); renderResume(); }
     });
 
     refreshFacets();
@@ -1050,7 +1290,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     });
 
     document.getElementById("refreshLiveBtn").addEventListener("click", () => loadLive());
-    document.getElementById("markSeenBtn").addEventListener("click", () => { ALL.forEach((j) => seen.add(j.id)); saveSet(LS.seen, seen); scheduleSync(); render(); });
+    document.getElementById("markSeenBtn").addEventListener("click", () => { ALL.forEach((j) => seen.add(j.id)); newThisVisit.clear(); resurfacedThisVisit.clear(); saveSet(LS.seen, seen); scheduleSync(); render(); });
     document.getElementById("clearFiltersBtn").addEventListener("click", () => {
       state.q = ""; document.getElementById("searchBox").value = "";
       state.minSalary = 0; salaryRange.value = 0; salaryReadout.textContent = "Any";
@@ -1061,6 +1301,21 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       document.querySelector('#filter-minfit .chip[data-fit="0"]').classList.add("active");
       render();
     });
+
+    // Phase 8: market-signals panel toggle
+    const trendsBtn = document.getElementById("trendsBtn"), marketPanel = document.getElementById("marketPanel");
+    if (trendsBtn) trendsBtn.addEventListener("click", () => {
+      const show = marketPanel.hidden; if (show) renderMarket();
+      marketPanel.hidden = !show; trendsBtn.classList.toggle("on", show);
+    });
+
+    // Phase 10a: walk-away salary anchor (a personal flag, not a filter)
+    const wi = document.getElementById("walkawayInput"), wr = document.getElementById("walkawayReadout");
+    const setWalkReadout = () => { if (wr) wr.textContent = walkaway > 0 ? "$" + Math.round(walkaway / 1000) + "k+" : ""; };
+    if (wi) {
+      if (walkaway > 0) wi.value = walkaway; setWalkReadout();
+      wi.addEventListener("input", () => { walkaway = +wi.value || 0; localStorage.setItem(LS.walkaway, walkaway); setWalkReadout(); render(); });
+    }
 
     // outreach modal
     const om = document.getElementById("outreachModal");
@@ -1113,7 +1368,15 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
     const bv = document.getElementById("brandVersion");
     if (bv && window.APP_VERSION) bv.textContent = "v" + window.APP_VERSION;
 
-    renderBio(); renderResume(); initSyncUI(); initWatchlistUI(); render();
+    // Phase 6/10d: resurface elapsed snoozes, then snapshot "new since last visit"
+    // and mark current cards seen so the green kicker decays next time. The very
+    // first run after this ships marks everything silently (no green wall).
+    processResurface();
+    firstDecayRun = !localStorage.getItem(LS.decayInit);
+    noteSeen(ALL, firstDecayRun);
+    localStorage.setItem(LS.decayInit, "1");
+
+    renderBio(); renderResume(); initSyncUI(); initWatchlistUI(); initMeSwitch(); initJournalUI(); render();
 
     // digest banner ("new since last visit")
     document.getElementById("digestShow").addEventListener("click", () => {
@@ -1121,6 +1384,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
       document.getElementById("digestBanner").hidden = true;
     });
     document.getElementById("digestDismiss").addEventListener("click", () => { document.getElementById("digestBanner").hidden = true; });
+    recordMarketSnapshot(); // Phase 8 — persist a monthly snapshot for trend history
     updateDigest();
 
     // PWA service worker (https/localhost only)
@@ -1139,7 +1403,7 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
 
     // refocus pull
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }
+      if (!document.hidden && sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); processResurface(); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }
     });
 
     if (sync.on()) { setSyncState("syncing…"); syncPull().then(() => { setSyncState("synced ✓"); refreshFacets(); render(); }).catch(() => setSyncState("sync error")); }

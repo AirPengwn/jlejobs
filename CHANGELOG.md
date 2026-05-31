@@ -3,6 +3,33 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.0 — 2026-05-30 — Signal & passive-radar features (brief Phases 6–10 + IA)
+- **"New" decay (P6):** the green kicker now means *new since your last visit*, not new
+  ever. Cards are marked seen on load so the badge decays next time; the first run after
+  this ships marks everything silently (no one-time green wall). Fixes the exception-color
+  collapse where nearly every card was green.
+- **Staleness signal (P7):** every card foot shows a muted relative age ("5 weeks ago");
+  Remote roles no longer render a commute field at all (no "0 mi"/"n/a").
+- **IA — Me tab:** Biography + Résumé folded into a single **Me** tab with a Bio/Résumé
+  segmented switch. Nav is now the four action surfaces (Opportunities, Pipeline, Map,
+  Grow) + Me.
+- **Market signals (P8):** a "📊 Market signals" panel over the cards — median salary
+  (trend vs prior month), work-mode mix, and rising/cooling skills. A monthly snapshot is
+  stored locally so trends accrue over time.
+- **Skill-gap → Grow (P9):** the Grow tab leads with "Skills the market wants that you
+  don't list" — aggregated from your strong-fit (70+) roles, after alias normalization.
+- **Quality-of-life bundle (P10):**
+  - *Walk-away anchor* — set a personal salary number (More filters); qualifying cards get
+    a quiet "✓ your #" flag (flags, doesn't hide).
+  - *Return digest* — the last-visit banner is now a concise multi-line digest (new,
+    resurfaced, watched-company activity, salary/skill movement).
+  - *Company watch* — cards from a company you've starred get a "★ watched co" flag when new.
+  - *Snooze / resurface* — per-card ⏰ 1 wk / 1 mo in the drawer; snoozed cards drop out of
+    the default view and resurface as an event when the timer elapses. Synced.
+  - *Journal* — a dated, append-only market-observation log (📓 Journal). Synced.
+- Snooze + journal join star/flag/hide/status/notes in the JSONBin sync payload.
+- SW cache → `jle-cache-v1.8.0`; scoring-config.js added to the precache list.
+
 ## v1.7.0 — 2026-05-30 — Fit-scoring overhaul (brief Phases 0–5)
 - **New `assets/data/scoring-config.js`** (window.SCORING_CONFIG) is the single source
   of truth for all scoring values — weights, FIT_TARGET, cap/floor, coverage blend,

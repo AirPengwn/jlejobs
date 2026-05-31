@@ -1,13 +1,14 @@
 /* Service worker: network-first for same-origin GETs (fresh data when online,
    cached fallback when offline). Cross-origin requests (Leaflet, Greenhouse/Ashby,
    JSONBin) are left untouched so they behave normally. */
-const CACHE = "jle-cache-v1.7.0";
+const CACHE = "jle-cache-v1.8.0";
 const CORE = [
   "./", "./index.html",
   "./assets/css/styles.css", "./assets/js/app.js",
   "./assets/data/version.js", "./assets/data/sync-config.js", "./assets/data/jobs.js",
   "./assets/data/bio.js", "./assets/data/resume.js", "./assets/data/resume-variants.js",
-  "./assets/data/grow.js", "./assets/img/stickman.jpg", "./manifest.webmanifest"
+  "./assets/data/grow.js", "./assets/data/scoring-config.js",
+  "./assets/img/stickman.jpg", "./manifest.webmanifest"
 ];
 
 self.addEventListener("install", (e) => {

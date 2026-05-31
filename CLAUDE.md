@@ -53,13 +53,18 @@ roleFamily values (exact strings): `Product Owner / PM`, `Instructional Design /
 `Business Analyst`, `Solutions / Implementation`, `LIMS / Scientific Informatics`.
 
 ## Key features (all in app.js)
-- **Tabs:** Opportunities · Map · Biography · Résumé.
+- **Tabs:** Opportunities · Pipeline · Map · Grow · Me (Me = Biography + Résumé behind a
+  segmented switch; folded together in v1.8 to keep nav to the action surfaces + Me).
 - **Filters:** role family + location + work mode + card type + my-status + min-salary
   slider; text search; sort (newest/fit/salary/company/title); quick toggles
-  (New/Starred/Flagged/Hidden); density toggle; chip count badges.
-- **Tracker:** per-card ★ star, ⚑ flag, 📝 note, 🚫 hide, and a status pipeline
+  (New/Starred/Flagged/Hidden/Snoozed); density toggle; chip count badges.
+- **Tracker:** per-card ★ star, ⚑ flag, 📝 note, 🚫 hide, ⏰ snooze, and a status pipeline
   (Watching→Interested→Applied→Interviewing→Passed/Closed). Persisted + synced.
-- **JSONBin sync:** state `{starred,flagged,seen,hidden,status,notes}` synced across
+- **Passive-radar signals (v1.8):** "New" decays to *since last visit*; muted relative
+  age per card; 📊 Market signals panel (median salary trend, work-mode mix, rising/cooling
+  skills — monthly snapshots in `jle_market_hist`); skill-gap list atop Grow; walk-away
+  salary flag; multi-line return digest; company-watch flag; snooze/resurface; 📓 Journal.
+- **JSONBin sync:** state `{starred,flagged,seen,hidden,status,notes,snooze,journal}` synced across
   devices. Pull on load + tab-refocus; debounced push on change. Key is in
   sync-config.js (public, scoped Access Key — accepted tradeoff). User can override/off
   via the ☁ Sync modal (localStorage).

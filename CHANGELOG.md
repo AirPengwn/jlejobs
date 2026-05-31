@@ -3,6 +3,20 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.1 — 2026-05-30 — Claude Design pass (score anatomy + return digest)
+Presentation-only restyle of the two items flagged for Design in `DESIGN-HANDOFF-v1.8.md`;
+no scoring math, digest computation, or data flow changed. Header/nav untouched (stays centered).
+- **Score anatomy (drawer):** the "Why this score" breakdown is now a segmented core-coverage
+  meter (`coreN` segments, `hitCore` filled teal), a soft résumé/bio matches bar + count, a
+  coral inset row for the disqualifier penalty (only when applied), and core-competency chips —
+  hit solid, *missing* dashed/muted so you can see what would raise the score. Emoji dropped.
+- **Return digest → "Since you were away":** green left-border removed (green is now only the
+  "new" marker dot); activity counts (new / resurfaced / watched-company) each get a colored
+  marker dot above a quiet "Market" footnote (salary ▲▼ %, rising skill). Heading shows the
+  gap ("· N days"). Market-only return shows a "Market update" heading with no "Show new" button.
+  Show/Dismiss handlers unchanged. Wires the reserved `jle_last_visit` timestamp.
+- Classes: `.rd-bd*` → `.sa*`; `.digest-banner*`/`.dg-line` → `.rdg*`. SW cache → `jle-cache-v1.8.1`.
+
 ## v1.8.0 — 2026-05-30 — Signal & passive-radar features (brief Phases 6–10 + IA)
 - **"New" decay (P6):** the green kicker now means *new since your last visit*, not new
   ever. Cards are marked seen on load so the badge decays next time; the first run after

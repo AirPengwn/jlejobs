@@ -384,15 +384,33 @@
       : `<a class="btn primary" href="${esc(j.applyUrl)}" target="_blank" rel="noopener">${primaryLabel} ↗</a>${j.altUrl ? `<a class="btn ghost" href="${esc(j.altUrl)}" target="_blank" rel="noopener">Alt link</a>` : ""}`;
     const allSkills = allTags.map((t) => `<span class="r-tag">${esc(t)}</span>`).join("");
     const coreN = (CFG.CORE_COMPETENCIES || []).length;
+    // v1.8.1 (Claude Design) — "score anatomy": segmented coverage meter, matches
+    // bar, coral penalty row, and core-competency chips (hit solid / missing dashed).
+    const matchPct = Math.min(100, Math.round(sc.matched.length / 20 * 100));
+    const segs = Array.from({ length: coreN }, (_, i) =>
+      `<span class="sa-seg${i < sc.hitCore.length ? " on" : ""}"></span>`).join("");
+    const missCore = (CFG.CORE_COMPETENCIES || []).filter((c) => !sc.hitCore.includes(c));
+    const coreChips =
+      sc.hitCore.map((c) => `<span class="sa-chip">${esc(c)}</span>`).join("") +
+      missCore.map((c) => `<span class="sa-chip miss">${esc(c)}</span>`).join("");
     const breakdown = `
-        <div>
-          <div class="rd-h">Why this score · ${pct}</div>
-          <div class="rd-bd">
-            <span class="rd-bd-i">🎯 <b>${sc.matched.length}</b> résumé/bio matches</span>
-            <span class="rd-bd-i">🧩 core coverage <b>${sc.hitCore.length}/${coreN}</b> (${Math.round(sc.coverage * 100)}%)</span>
-            ${sc.disq ? `<span class="rd-bd-i disq">⛔ disqualifier penalty ×${SC.DISQUALIFIER_PENALTY}</span>` : ""}
+        <div class="sa">
+          <div class="sa-head">
+            <span class="sa-title">Why this score</span>
+            <span class="sa-score">${pct}<span class="of"> / 100</span></span>
           </div>
-          ${sc.hitCore.length ? `<div class="rd-bd-core">core hit: ${esc(sc.hitCore.join(" · "))}</div>` : ""}
+          <div class="sa-row">
+            <span class="sa-k">Core coverage</span>
+            <div class="sa-meter">${segs}</div>
+            <span class="sa-v">${sc.hitCore.length}/${coreN} <span class="pct">${Math.round(sc.coverage * 100)}%</span></span>
+          </div>
+          <div class="sa-row">
+            <span class="sa-k">Résumé &amp; bio matches</span>
+            <div class="sa-bar2"><i style="width:${matchPct}%"></i></div>
+            <span class="sa-v">${sc.matched.length}</span>
+          </div>
+          ${sc.disq ? `<div class="sa-disq"><span class="x">×${SC.DISQUALIFIER_PENALTY}</span> Disqualifier penalty applied — contains an excluded term</div>` : ""}
+          ${(sc.hitCore.length || missCore.length) ? `<div class="sa-core"><span class="sa-core-l">Core competencies</span><div class="sa-chips">${coreChips}</div></div>` : ""}
         </div>`;
     const drawer = `
       <div class="r-drawer">
@@ -976,27 +994,42 @@ ${(r.contact && r.contact.email) || "johnlorinevans@gmail.com"} · ${(r.contact 
   // Phase 10b: graceful dormancy — a concise multi-line digest on return, not a
   // wall of green. Summarizes new, resurfaced, watched-company activity, and
   // salary/skill movement from the stored market history.
+  // v1.8.1 (Claude Design): grouped digest — activity counts (marker dots) above a
+  // quiet "Market" footnote; "Market update" solo state when only the field moved.
   function updateDigest() {
     const banner = document.getElementById("digestBanner"); if (!banner) return;
     const visited = localStorage.getItem(LS.visited);
+    const lastTs = +localStorage.getItem(LS.lastVisit) || 0;
+    const daysAway = lastTs ? Math.floor((Date.now() - lastTs) / 86400000) : 0;
     const newCount = newThisVisit.size;
-    const lines = [];
-    if (newCount) lines.push(`🟢 <b>${newCount}</b> new since your last visit`);
-    if (resurfacedThisVisit.size) lines.push(`⏰ <b>${resurfacedThisVisit.size}</b> snoozed role${resurfacedThisVisit.size > 1 ? "s" : ""} resurfaced`);
     const watchedNew = ALL.filter((j) => isNew(j) && !starred.has(j.id) && _watchedCos.has((j.company || "").toLowerCase()));
-    if (watchedNew.length) lines.push(`★ <b>${watchedNew.length}</b> new from companies you star (${esc([...new Set(watchedNew.map((j) => j.company))].slice(0, 3).join(", "))})`);
+
+    const act = [];
+    if (newCount) act.push(`<div class="rdg-line"><span class="rdg-mk new"></span><span><span class="n">${newCount}</span> new since your last visit</span></div>`);
+    if (resurfacedThisVisit.size) act.push(`<div class="rdg-line"><span class="rdg-mk resurf"></span><span><span class="n">${resurfacedThisVisit.size}</span> snoozed role${resurfacedThisVisit.size > 1 ? "s" : ""} resurfaced</span></div>`);
+    if (watchedNew.length) act.push(`<div class="rdg-line"><span class="rdg-mk star"></span><span><span class="n">${watchedNew.length}</span> new from compan${watchedNew.length > 1 ? "ies" : "y"} you star <span class="src">— ${esc([...new Set(watchedNew.map((j) => j.company))].slice(0, 3).join(", "))}</span></span></div>`);
+
+    const mkt = [];
     const hist = loadMarketHist(), cur = hist[hist.length - 1], curM = cur && cur.date.slice(0, 7);
     const prev = cur ? hist.filter((h) => h.date.slice(0, 7) < curM).slice(-1)[0] : null;
-    if (cur && prev && prev.median) { const c = Math.round((cur.median - prev.median) / prev.median * 100); if (Math.abs(c) >= 2) lines.push(`💰 median salary ${c > 0 ? "up" : "down"} <b>${Math.abs(c)}%</b> vs last month`); }
+    if (cur && prev && prev.median) { const c = Math.round((cur.median - prev.median) / prev.median * 100); if (Math.abs(c) >= 2) mkt.push(`<span class="ml">median salary <span class="${c > 0 ? "up" : "down"}">${c > 0 ? "▲" : "▼"} ${Math.abs(c)}%</span></span>`); }
     if (cur && prev) {
       const top = Object.keys(cur.skillFreq).map((k) => ({ k, d: cur.skillFreq[k] - ((prev.skillFreq[k]) || 0) })).filter((s) => s.d > 0).sort((a, b) => b.d - a.d)[0];
-      if (top && top.d >= 2) lines.push(`📈 "${esc(top.k)}" rising in demand`);
+      if (top && top.d >= 2) mkt.push(`<span class="ml"><b>“${esc(top.k)}”</b> rising in demand</span>`);
     }
-    if (visited && lines.length) {
-      document.getElementById("digestText").innerHTML = lines.slice(0, 5).map((l) => `<span class="dg-line">${l}</span>`).join("");
+
+    const solo = act.length === 0 && mkt.length > 0;
+    const marketHTML = mkt.length
+      ? `<div class="rdg-market${solo ? " solo" : ""}">${solo ? "" : '<span class="rdg-mlabel">Market</span>'}${mkt.join('<span class="sep">·</span>')}</div>`
+      : "";
+    if (visited && (act.length || mkt.length)) {
+      document.getElementById("digestHeading").innerHTML = (solo ? "Market update" : "Since you were away") + (!solo && daysAway >= 1 ? ` <span class="since">· ${daysAway} day${daysAway > 1 ? "s" : ""}</span>` : "");
+      document.getElementById("digestShow").style.display = solo ? "none" : "";
+      document.getElementById("digestText").innerHTML = `${act.length ? `<div class="rdg-activity">${act.join("")}</div>` : ""}${marketHTML}`;
       banner.hidden = false;
     } else { banner.hidden = true; }
     localStorage.setItem(LS.visited, "1");
+    localStorage.setItem(LS.lastVisit, String(Date.now()));
   }
   function initWatchlistUI() {
     const modal = document.getElementById("watchModal");

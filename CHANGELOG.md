@@ -3,6 +3,15 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.2 — 2026-06-01 — Monthly refresh (5 new posting cards + link-health pass)
+- **5 new specific posting cards (June 2026 refresh):**
+  - Precision Medicine Group — Product Owner LIMS (LIMS / Scientific Informatics + PO, fully remote, ~$110k–$145k est.) — own the backlog and sprint ceremonies for a CRO's proprietary LIMS platform.
+  - Veeva Systems — Technical Writer / eLearning Developer (Technical Writing + ID/L&D + LIMS, remote, $65k–$110k) — build online help and Articulate eLearning for a new Veeva product.
+  - Veeva Systems — Technical Instructor (Customer Education + LIMS, remote, up to $120k) — deliver virtual and on-site ILT to Veeva customers across life-sciences cloud tracks.
+  - Sapio Sciences — Product Manager LIMS/ELN (LIMS / Scientific Informatics + PO, remote US East Coast, ~$100k–$140k est.) — own product narrative and roadmap for a dedicated LIMS/ELN vendor.
+  - Harvey AI — Senior Instructional Designer, Customer Education (ID/L&D + Customer Education, remote, $60k–$80k) — own Harvey Academy course development; note lower salary band.
+- **Link-health pass:** checked all 20 existing `kind:"posting"` apply-links; all returned 403 (treated as `"ok"` per conservative policy, no 404/410s). Updated `linkChecked` to 2026-06-01 on all cards. No links marked dead.
+
 ## v1.8.1 — 2026-05-30 — Claude Design pass (score anatomy + return digest)
 Presentation-only restyle of the two items flagged for Design in `DESIGN-HANDOFF-v1.8.md`;
 no scoring math, digest computation, or data flow changed. Header/nav untouched (stays centered).

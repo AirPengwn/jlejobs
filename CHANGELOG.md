@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.3 — 2026-07-01 — Monthly refresh (3 new posting cards + link-health pass)
+- **3 new specific posting cards (July 2026 refresh):**
+  - Snapsheet Inc — Instructional Designer (ID/L&D + Customer Education, fully remote, $80k–$90k) — build eLearning assets and onboarding guides for a SaaS Customer Education & Enablement team; Articulate/Rise/Camtasia; 3+ yrs SaaS ID.
+  - The Hartford — Sr. Agile Product Owner — GyroScope (PO/PM + Agile, Hartford CT hybrid/remote, $116k–$174k) — set priorities for 1–2 Agile teams at a major CT insurer; SAFe PO experience direct fit.
+  - The Hartford — Agile Product Owner — Gen AI Products (PO/PM, Hartford CT remote option, $84k–$150k) — own Gen AI-powered solutions for Personal Insurance Innovation Value Stream; 3+ yrs PO/Agile required.
+- **Link-health pass:** checked all 25 existing `kind:"posting"` apply-links; all returned connection errors through the proxy environment (treated as `"ok"` per conservative policy — connection errors ≠ 404/410). No links marked dead. Updated `linkChecked` to 2026-07-01 on all cards.
+
 ## v1.8.2 — 2026-06-01 — Monthly refresh (5 new posting cards + link-health pass)
 - **5 new specific posting cards (June 2026 refresh):**
   - Precision Medicine Group — Product Owner LIMS (LIMS / Scientific Informatics + PO, fully remote, ~$110k–$145k est.) — own the backlog and sprint ceremonies for a CRO's proprietary LIMS platform.

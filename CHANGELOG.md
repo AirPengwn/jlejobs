@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.4 — 2026-08-01 — Monthly refresh (3 new posting cards + link-health pass)
+- **3 new specific posting cards (August 2026 refresh):**
+  - RTX (Raytheon Technologies) — Scaled Agile PO / Scrum Master Coach (Scrum Master / Agile + PO, Hartford CT / Remote, $86.8k–$165.2k) — SAFe Agile coaching role in a mature defense-tech org; posted June 9, 2026; ~35 min from Guilford.
+  - Scispot — Customer Success Manager (Customer Education + LIMS / Scientific Informatics, fully remote, $90k–$130k est.) — CSM at a biotech LIMS/ELN/AI platform (Scispot) serving modern genomics and biotech labs; 3+ yrs CS + wet-lab or bioinformatics background required.
+  - Neon One (via HighlightTA) — Instructional Designer (Instructional Design / L&D, fully remote, $75k–$95k est.) — 5+ yrs ID for nonprofit CRM/fundraising SaaS; Articulate Storyline 360; unlimited PTO; Skilljar a plus.
+- **Link-health pass:** checked all 28 existing `kind:"posting"` apply-links; all returned connection errors (treated as `"ok"` per conservative policy — connection errors ≠ 404/410). No links marked dead. Updated `linkChecked` to 2026-08-01 on all cards.
+
 ## v1.8.3 — 2026-07-01 — Monthly refresh (3 new posting cards + link-health pass)
 - **3 new specific posting cards (July 2026 refresh):**
   - Snapsheet Inc — Instructional Designer (ID/L&D + Customer Education, fully remote, $80k–$90k) — build eLearning assets and onboarding guides for a SaaS Customer Education & Enablement team; Articulate/Rise/Camtasia; 3+ yrs SaaS ID.

@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.5 — 2026-09-01 — Monthly refresh (3 new posting cards + link-health pass)
+- **3 new specific posting cards (September 2026 refresh):**
+  - Veeva Systems — Senior Product Manager, LIMS (LIMS / Scientific Informatics + PO/PM, fully remote, $150k–$220k est.) — own the LIMS product roadmap for Veeva Quality applications; senior enterprise SaaS PM role in John's direct domain.
+  - NICE — eLearning Instructional Designer (Instructional Design / L&D + Customer Education, fully remote, $85k–$110k est.) — build interactive customer-facing eLearning for the NICE CXone Mpower platform using Articulate Storyline and Camtasia; part of NICE Global Education Services.
+  - Sapio Sciences — Solutions Consultant, LIMS / ELN (LIMS / Scientific Informatics + Solutions / Implementation, remote US East Coast preferred, $90k–$130k est.) — technical pre-sales consultant for Sapio's unified LIMS/ELN/SDMS platform; deep LIMS domain + customer-facing experience required.
+- **Link-health pass:** checked all 31 existing `kind:"posting"` apply-links; all returned connection errors (treated as `"ok"` per conservative policy — connection errors ≠ 404/410). No links marked dead. Updated `linkChecked` to 2026-09-01 on all cards.
+
 ## v1.8.4 — 2026-08-01 — Monthly refresh (3 new posting cards + link-health pass)
 - **3 new specific posting cards (August 2026 refresh):**
   - RTX (Raytheon Technologies) — Scaled Agile PO / Scrum Master Coach (Scrum Master / Agile + PO, Hartford CT / Remote, $86.8k–$165.2k) — SAFe Agile coaching role in a mature defense-tech org; posted June 9, 2026; ~35 min from Guilford.

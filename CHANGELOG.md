@@ -3,6 +3,13 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.6 — 2026-10-01 — Monthly refresh (3 new posting cards + link-health pass)
+- **3 new specific posting cards (October 2026 refresh):**
+  - Chime Financial — Sr. Instructional Designer, Learning Operations (Instructional Design / L&D + Customer Education, fully remote, $116k–$160k + bonus/equity) — design ILT/vILT/eLearning/microlearning solutions for Chime's Operations & Member Experience BPO teams using Articulate 360; posted October 1, 2026.
+  - The Travelers Companies — Agile Product Owner, Personal Insurance (Product Owner / PM + Scrum Master / Agile, Hartford CT hybrid, $99k–$163k) — own consumer-facing digital quoting and acquisition delivery as APO in Personal Insurance division; Job #R-51907, posted August 5, 2026.
+  - TeselaGen Biotechnology — Technical Writer (Technical Writing / Content + LIMS / Scientific Informatics, remote global, ~$80k–$115k est.) — create user guides, API references, tutorials, and release notes for TeselaGen's LIMS/ELN platform and AI agents; biotech/life-sciences technical audience.
+- **Link-health pass:** checked all 34 existing `kind:"posting"` apply-links; all returned connection errors (treated as `"ok"` per conservative policy — connection errors ≠ 404/410). No links marked dead. Updated `linkChecked` to 2026-10-01 on all cards.
+
 ## v1.8.5 — 2026-09-01 — Monthly refresh (3 new posting cards + link-health pass)
 - **3 new specific posting cards (September 2026 refresh):**
   - Veeva Systems — Senior Product Manager, LIMS (LIMS / Scientific Informatics + PO/PM, fully remote, $150k–$220k est.) — own the LIMS product roadmap for Veeva Quality applications; senior enterprise SaaS PM role in John's direct domain.

@@ -3,6 +3,14 @@
 Versioning: each update ships on its own `vX.Y.Z` branch, then merges to `main`
 (which is what GitHub Pages serves).
 
+## v1.8.7 — 2026-11-01 — Monthly refresh (4 new posting cards + link-health pass)
+- **4 new specific posting cards (November 2026 refresh):**
+  - Samsara — Team Lead, Senior Instructional Designer (Instructional Design / L&D + Customer Education, remote US excl. SF/NYC/DC, $76k–$116k+equity est.) — lead instructional strategy and AI-driven content development for Samsara's Customer Education team; 5+ yrs SaaS ID required; posted October 15, 2026.
+  - Clinisys — Senior Product Manager, Life Sciences Markets (LIMS / Scientific Informatics + PO/PM, fully remote US, $150k–$190k) — own strategy, SaaS roadmaps, and AI adoption for Clinisys's Life Sciences laboratory informatics products; leading LIMS/laboratory informatics vendor.
+  - Pratt & Whitney (RTX) — Senior Manager, Product Owner (PO/PM + Scrum Master / Agile, remote US-CT, $132k–$252k) — SAFe POPM/CSPO preferred; Digital Technology Product Management org; posted September 28, 2026; U.S. Person eligibility required.
+  - QBench — Customer Success Manager (Customer Education / Enablement + LIMS / Scientific Informatics, fully remote, $90k–$120k est.) — own the post-implementation CSM lifecycle for a SaaS LIMS serving GxP/ISO/CLIA/FDA-regulated laboratories; 3+ yrs B2B SaaS CS.
+- **Link-health pass:** checked all 37 existing `kind:"posting"` apply-links; all returned connection errors (treated as `"ok"` per conservative policy — connection errors ≠ 404/410). No links marked dead. Updated `linkChecked` to 2026-11-01 on all cards.
+
 ## v1.8.6 — 2026-10-01 — Monthly refresh (3 new posting cards + link-health pass)
 - **3 new specific posting cards (October 2026 refresh):**
   - Chime Financial — Sr. Instructional Designer, Learning Operations (Instructional Design / L&D + Customer Education, fully remote, $116k–$160k + bonus/equity) — design ILT/vILT/eLearning/microlearning solutions for Chime's Operations & Member Experience BPO teams using Articulate 360; posted October 1, 2026.
